@@ -21,16 +21,7 @@ import com.alibaba.cloud.ai.dataagent.service.knowledge.AgentKnowledgeService;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.CrossOrigin;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.HashMap;
 import java.util.List;
@@ -46,6 +37,8 @@ import java.util.Map;
 @AllArgsConstructor
 // todo: 功能完成后需要与前端接入，部分返回值需要定义DTO
 public class AgentKnowledgeController {
+
+	// TODO 2025/11/19 规范返回结果为ApiResponse，外层不要ResponseEntity包装了
 
 	private final AgentKnowledgeService agentKnowledgeService;
 
@@ -151,12 +144,12 @@ public class AgentKnowledgeController {
 				try {
 					agentKnowledgeService.addKnowledgeToVectorStore(Long.valueOf(knowledge.getAgentId()), knowledge);
 					// Update embedding status to completed
-					knowledge.setEmbeddingStatus("completed");
+					// knowledge.setEmbeddingStatus("completed");
 					agentKnowledgeService.updateKnowledge(knowledge.getId(), knowledge);
 				}
 				catch (Exception vectorException) {
 					// Vector storage failed, update embedding status to failed
-					knowledge.setEmbeddingStatus("failed");
+					// knowledge.setEmbeddingStatus("failed");
 					agentKnowledgeService.updateKnowledge(knowledge.getId(), knowledge);
 					// Log but don't affect main process
 					response.put("vectorWarning", "知识已保存，但向量化失败：" + vectorException.getMessage());
@@ -221,7 +214,7 @@ public class AgentKnowledgeController {
 					if (statusChangedFromActive) {
 						// Status changes from active to other, delete vector data
 						agentKnowledgeService.deleteKnowledgeFromVectorStore(agentId, id);
-						updatedKnowledge.setEmbeddingStatus("pending");
+						// updatedKnowledge.setEmbeddingStatus("pending");
 					}
 					else if ((contentChanged || statusChangedToActive) && "active".equals(updatedKnowledge.getStatus())
 							&& updatedKnowledge.getContent() != null
@@ -233,7 +226,7 @@ public class AgentKnowledgeController {
 						agentKnowledgeService.addKnowledgeToVectorStore(agentId, updatedKnowledge); // Then
 						// add
 						// new
-						updatedKnowledge.setEmbeddingStatus("completed");
+						// updatedKnowledge.setEmbeddingStatus("completed");
 						agentKnowledgeService.updateKnowledge(id, updatedKnowledge); // Update
 																						// embedding
 																						// status
@@ -241,7 +234,7 @@ public class AgentKnowledgeController {
 				}
 				catch (Exception vectorException) {
 					// Vector storage operation failed, update embedding status to failed
-					updatedKnowledge.setEmbeddingStatus("failed");
+					// updatedKnowledge.setEmbeddingStatus("failed");
 					agentKnowledgeService.updateKnowledge(id, updatedKnowledge);
 					response.put("vectorWarning", "知识已更新，但向量化失败：" + vectorException.getMessage());
 				}

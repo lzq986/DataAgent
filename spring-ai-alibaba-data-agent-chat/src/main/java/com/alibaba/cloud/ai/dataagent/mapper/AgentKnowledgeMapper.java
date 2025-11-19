@@ -32,7 +32,7 @@ import java.util.List;
 public interface AgentKnowledgeMapper {
 
 	@Select("""
-			SELECT * FROM agent_knowledge WHERE agent_id = #{agentId} ORDER BY create_time DESC
+			SELECT * FROM agent_knowledge WHERE agent_id = #{agentId} ORDER BY created_time DESC
 			""")
 	List<AgentKnowledge> selectByAgentId(@Param("agentId") Integer agentId);
 
@@ -42,10 +42,8 @@ public interface AgentKnowledgeMapper {
 	AgentKnowledge selectById(@Param("id") Integer id);
 
 	@Insert("""
-			INSERT INTO agent_knowledge (agent_id, title, content, type, category, tags, status,
-			source_url, file_path, file_size, file_type, embedding_status, creator_id, create_time, update_time)
-			VALUES (#{agentId}, #{title}, #{content}, #{type}, #{category}, #{tags}, #{status},
-			#{sourceUrl}, #{filePath}, #{fileSize}, #{fileType}, #{embeddingStatus}, #{creatorId}, #{createTime}, #{updateTime})
+			INSERT INTO agent_knowledge (agent_id, title, content, type, question, status, source_filename, file_path, file_size, created_time, updated_time)
+			VALUES (#{agentId}, #{title}, #{content}, #{type}, #{question}, #{status}, #{sourceFilename}, #{filePath}, #{fileSize}, #{createdTime}, #{updatedTime})
 			""")
 	@Options(useGeneratedKeys = true, keyProperty = "id", keyColumn = "id")
 	int insert(AgentKnowledge knowledge);
@@ -57,15 +55,12 @@ public interface AgentKnowledgeMapper {
 				<if test="title != null">title = #{title},</if>
 				<if test="content != null">content = #{content},</if>
 				<if test="type != null">type = #{type},</if>
-				<if test="category != null">category = #{category},</if>
-				<if test="tags != null">tags = #{tags},</if>
+				<if test="question != null">question = #{question},</if>
 				<if test="status != null">status = #{status},</if>
-				<if test="sourceUrl != null">source_url = #{sourceUrl},</if>
+				<if test="sourceFilename != null">source_filename = #{sourceFilename},</if>
 				<if test="filePath != null">file_path = #{filePath},</if>
 				<if test="fileSize != null">file_size = #{fileSize},</if>
-				<if test="fileType != null">file_type = #{fileType},</if>
-				<if test="embeddingStatus != null">embedding_status = #{embeddingStatus},</if>
-				update_time = NOW()
+				updated_time = NOW()
 			</set>
 			WHERE id = #{id}
 			</script>
@@ -78,26 +73,26 @@ public interface AgentKnowledgeMapper {
 	int deleteById(@Param("id") Integer id);
 
 	@Select("""
-			SELECT * FROM agent_knowledge WHERE agent_id = #{agentId} AND type = #{type} ORDER BY create_time DESC
+			SELECT * FROM agent_knowledge WHERE agent_id = #{agentId} AND type = #{type} ORDER BY created_time DESC
 			""")
 	List<AgentKnowledge> selectByAgentIdAndType(@Param("agentId") Integer agentId, @Param("type") String type);
 
 	@Select("""
-			SELECT * FROM agent_knowledge WHERE agent_id = #{agentId} AND status = #{status} ORDER BY create_time DESC
+			SELECT * FROM agent_knowledge WHERE agent_id = #{agentId} AND status = #{status} ORDER BY created_time DESC
 			""")
-	List<AgentKnowledge> selectByAgentIdAndStatus(@Param("agentId") Integer agentId, @Param("status") String status);
+	List<AgentKnowledge> selectByAgentIdAndStatus(@Param("agentId") Integer agentId, @Param("status") Integer status);
 
 	@Select("""
 			SELECT * FROM agent_knowledge WHERE agent_id = #{agentId} AND
-			(title LIKE CONCAT('%', #{keyword}, '%') OR content LIKE CONCAT('%', #{keyword}, '%') OR tags LIKE CONCAT('%', #{keyword}, '%'))
-			ORDER BY create_time DESC
+			(title LIKE CONCAT('%', #{keyword}, '%') OR content LIKE CONCAT('%', #{keyword}, '%') OR question LIKE CONCAT('%', #{keyword}, '%'))
+			ORDER BY created_time DESC
 			""")
 	List<AgentKnowledge> searchByAgentIdAndKeyword(@Param("agentId") Integer agentId, @Param("keyword") String keyword);
 
 	@Update("""
-			UPDATE agent_knowledge SET status = #{status}, update_time = #{now} WHERE id = #{id}
+			UPDATE agent_knowledge SET status = #{status}, updated_time = #{now} WHERE id = #{id}
 			""")
-	int updateStatus(@Param("id") Integer id, @Param("status") String status, @Param("now") LocalDateTime now);
+	int updateStatus(@Param("id") Integer id, @Param("status") Integer status, @Param("now") LocalDateTime now);
 
 	@Select("""
 			SELECT COUNT(*) FROM agent_knowledge WHERE agent_id = #{agentId}

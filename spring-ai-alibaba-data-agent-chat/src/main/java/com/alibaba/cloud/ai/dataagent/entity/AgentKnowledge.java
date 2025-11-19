@@ -37,32 +37,24 @@ public class AgentKnowledge {
 
 	private String title;
 
-	private String content;
+	private String type; // DOCUMENT, QA, FAQ
 
-	private String type; // document, qa, faq
+	private String question; // 仅当type为QA或FAQ时使用
 
-	private String category;
+	private String content; // 对于QA/FAQ是答案; 对于DOCUMENT, 此字段通常为空
 
-	private String tags;
+	private Integer status; // 业务状态: 1=启用, 0=禁用
 
-	private String status; // active, inactive
+	private String sourceFilename; // 上传时的原始文件名
 
-	private String sourceUrl;
+	private String filePath; // 文件在服务器上的物理存储路径
 
-	private String filePath;
-
-	private Long fileSize;
-
-	private String fileType;
-
-	private String embeddingStatus; // pending, processing, completed, failed
-
-	private Long creatorId;
+	private Long fileSize; // 文件大小 (字节)
 
 	@JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
-	private LocalDateTime createTime;
+	private LocalDateTime createdTime;
 
 	@JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
-	private LocalDateTime updateTime;
+	private LocalDateTime updatedTime;
 
 }

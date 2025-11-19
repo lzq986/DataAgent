@@ -126,6 +126,7 @@ public class DocumentConverterUtil {
 		return DocumentMetadataConstant.BUSINESS_TERM + ":" + agentId + ":" + businessKnowledgeId;
 	}
 
+	// TODO 2025/11/19 待改造
 	/**
 	 * Create Document from AgentKnowledge
 	 */
@@ -140,14 +141,13 @@ public class DocumentConverterUtil {
 		metadata.put("knowledgeId", knowledge.getId());
 		metadata.put("title", knowledge.getTitle());
 		metadata.put("type", knowledge.getType());
-		metadata.put("category", knowledge.getCategory());
-		metadata.put("tags", knowledge.getTags());
+
 		metadata.put("status", knowledge.getStatus());
 		metadata.put("vectorType", "knowledge:" + knowledge.getType());
-		metadata.put("sourceUrl", knowledge.getSourceUrl());
-		metadata.put("fileType", knowledge.getFileType());
-		metadata.put("embeddingStatus", knowledge.getEmbeddingStatus());
-		metadata.put("createTime", knowledge.getCreateTime());
+		// metadata.put("sourceUrl", knowledge.getSourceUrl());
+		// metadata.put("fileType", knowledge.getFileType());
+		// metadata.put("embeddingStatus", knowledge.getEmbeddingStatus());
+		// metadata.put("createTime", knowledge.getCreateTime());
 
 		return new Document(content, metadata);
 	}

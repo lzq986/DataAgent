@@ -64,16 +64,16 @@ public class AgentKnowledgeServiceImpl implements AgentKnowledgeService {
 		if (knowledge.getType() == null) {
 			knowledge.setType("document");
 		}
-		if (knowledge.getStatus() == null) {
-			knowledge.setStatus("active");
-		}
-		if (knowledge.getEmbeddingStatus() == null) {
-			knowledge.setEmbeddingStatus("pending");
-		}
-
-		// Set creation and update time
-		knowledge.setCreateTime(now);
-		knowledge.setUpdateTime(now);
+		// if (knowledge.getStatus() == null) {
+		// knowledge.setStatus("active");
+		// }
+		// if (knowledge.getEmbeddingStatus() == null) {
+		// knowledge.setEmbeddingStatus("pending");
+		// }
+		//
+		// // Set creation and update time
+		// knowledge.setCreateTime(now);
+		// knowledge.setUpdateTime(now);
 
 		// Insert into database, the ID will be auto-filled by MyBatis
 		return agentKnowledgeMapper.insert(knowledge) > 0;
@@ -85,7 +85,7 @@ public class AgentKnowledgeServiceImpl implements AgentKnowledgeService {
 
 		// Ensure the knowledge object has the correct ID
 		knowledge.setId(id);
-		knowledge.setUpdateTime(now);
+		// knowledge.setUpdateTime(now);
 
 		int updatedRows = agentKnowledgeMapper.update(knowledge);
 		return updatedRows > 0;
@@ -104,7 +104,7 @@ public class AgentKnowledgeServiceImpl implements AgentKnowledgeService {
 
 	@Override
 	public List<AgentKnowledge> getKnowledgeByStatus(Integer agentId, String status) {
-		return agentKnowledgeMapper.selectByAgentIdAndStatus(agentId, status);
+		return agentKnowledgeMapper.selectByAgentIdAndStatus(agentId, Integer.valueOf(status));
 	}
 
 	@Override
@@ -118,7 +118,7 @@ public class AgentKnowledgeServiceImpl implements AgentKnowledgeService {
 
 		int totalUpdated = 0;
 		for (Integer id : ids) {
-			totalUpdated += agentKnowledgeMapper.updateStatus(id, status, now);
+			totalUpdated += agentKnowledgeMapper.updateStatus(id, Integer.valueOf(status), now);
 		}
 		return totalUpdated == ids.size();
 	}

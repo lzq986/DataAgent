@@ -63,31 +63,22 @@ CREATE TABLE IF NOT EXISTS `semantic_model` (
 
 -- 智能体知识表
 CREATE TABLE IF NOT EXISTS agent_knowledge (
-  id INT NOT NULL AUTO_INCREMENT,
-  agent_id INT NOT NULL COMMENT '智能体ID',
-  title VARCHAR(255) NOT NULL COMMENT '知识标题',
-  content TEXT COMMENT '知识内容',
-  type VARCHAR(50) DEFAULT 'document' COMMENT '知识类型：document-文档，qa-问答，faq-常见问题',
-  category VARCHAR(100) COMMENT '知识分类',
-  tags TEXT COMMENT '标签，逗号分隔',
-  status VARCHAR(50) DEFAULT 'inactive' COMMENT '状态：active-启用，inactive-禁用',
-  source_url VARCHAR(500) COMMENT '来源URL',
-  file_path VARCHAR(500) COMMENT '文件路径',
-  file_size BIGINT COMMENT '文件大小（字节）',
-  file_type VARCHAR(100) COMMENT '文件类型',
-  embedding_status VARCHAR(50) DEFAULT 'pending' COMMENT '向量化状态：pending-待处理，processing-处理中，completed-已完成，failed-失败',
-  creator_id BIGINT COMMENT '创建者ID',
-  create_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
-  update_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
-  PRIMARY KEY (id),
-  INDEX idx_agent_id (agent_id),
-  INDEX idx_title (title),
-  INDEX idx_type (type),
-  INDEX idx_status (status),
-  INDEX idx_category (category),
-  INDEX idx_embedding_status (embedding_status),
+  id INT NOT NULL AUTO_INCREMENT COMMENT '主键ID, 用于内部关联',
+  agent_id INT NOT NULL COMMENT '关联的智能体ID',
+  title VARCHAR(255) NOT NULL COMMENT '知识的标题 (用户定义, 用于在UI上展示和识别)',
+  type VARCHAR(50) NOT NULL COMMENT '知识类型: DOCUMENT-文档, QA-问答, FAQ-常见问题',
+  question TEXT COMMENT '问题 (仅当type为QA或FAQ时使用)',
+  content MEDIUMTEXT COMMENT '知识内容 (对于QA/FAQ是答案; 对于DOCUMENT, 此字段通常为空)',
+  status TINYINT(1) NOT NULL DEFAULT '1' COMMENT '业务状态: 1=启用, 0=禁用',
+  source_filename VARCHAR(500) DEFAULT NULL COMMENT '上传时的原始文件名',
+  file_path VARCHAR(500) DEFAULT NULL COMMENT '文件在服务器上的物理存储路径',
+  file_size BIGINT DEFAULT NULL COMMENT '文件大小 (字节)',
+  created_time TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  updated_time TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  PRIMARY KEY (id) USING BTREE,
+  KEY idx_agent_id_status (agent_id, status) USING BTREE,
   FOREIGN KEY (agent_id) REFERENCES agent(id) ON DELETE CASCADE
-) ENGINE = InnoDB COMMENT = '智能体知识表';
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_bin ROW_FORMAT = DYNAMIC COMMENT = '智能体知识源管理表 (支持文档、QA、FAQ)';
 
 -- 数据源表
 CREATE TABLE IF NOT EXISTS datasource (
@@ -202,3 +193,21 @@ CREATE TABLE IF NOT EXISTS user_prompt_config (
   INDEX idx_prompt_type_enabled_priority (prompt_type, enabled, priority DESC),
   INDEX idx_display_order (display_order ASC)
 ) ENGINE = InnoDB COMMENT = '用户Prompt配置表';
+
+
+-- 同步任务表
+CREATE TABLE IF NOT EXISTS `sync_tasks` (
+  `id` bigint(20) NOT NULL AUTO_INCREMENT,
+  `entity_type` varchar(100) NOT NULL COMMENT '实体类型, 例如: AGENT_KNOWLEDGE, BUSINESS_TERM',
+  `entity_id` bigint(20) NOT NULL COMMENT '对应实体在各自表中的主键ID',
+  `operation_type` varchar(50) NOT NULL COMMENT '操作类型: EXECUTE_VECTORIZE, DELETE_VECTOR',
+  `status` varchar(50) NOT NULL DEFAULT 'PENDING' COMMENT '任务状态: PENDING, PROCESSING, COMPLETED, FAILED',
+  `retry_count` int(11) NOT NULL DEFAULT '0',
+  `error_message` text,
+  `processing_node_id` varchar(100) DEFAULT NULL COMMENT '正在处理此任务的节点ID (用于分布式锁定)',
+  `processing_start_time` timestamp NULL DEFAULT NULL COMMENT '开始处理任务的时间 (用于识别僵尸任务)',
+  `created_time` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_time` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `idx_status_retry_time` (`status`,`retry_count`,`created_time`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='通用后台同步任务表';
