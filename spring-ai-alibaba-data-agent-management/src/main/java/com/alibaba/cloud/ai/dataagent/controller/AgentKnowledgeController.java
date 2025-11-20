@@ -16,12 +16,17 @@
 
 package com.alibaba.cloud.ai.dataagent.controller;
 
+import com.alibaba.cloud.ai.dataagent.dto.AgentKnowledgeQueryDTO;
+import com.alibaba.cloud.ai.dataagent.dto.PageResult;
 import com.alibaba.cloud.ai.dataagent.entity.AgentKnowledge;
+import com.alibaba.cloud.ai.dataagent.service.file.FileStorageService;
 import com.alibaba.cloud.ai.dataagent.service.knowledge.AgentKnowledgeService;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.HashMap;
 import java.util.List;
@@ -41,6 +46,8 @@ public class AgentKnowledgeController {
 	// TODO 2025/11/19 规范返回结果为ApiResponse，外层不要ResponseEntity包装了
 
 	private final AgentKnowledgeService agentKnowledgeService;
+
+    private final FileStorageService fileStorageService;
 
 	/**
 	 * Query knowledge list by agent ID
@@ -135,6 +142,20 @@ public class AgentKnowledgeController {
 				return ResponseEntity.badRequest().body(response);
 			}
 
+			// Set default values if not provided
+			if (knowledge.getStatus() == null || knowledge.getStatus().trim().isEmpty()) {
+				knowledge.setStatus("active");
+			}
+			if (knowledge.getEmbeddingStatus() == null || knowledge.getEmbeddingStatus().trim().isEmpty()) {
+				knowledge.setEmbeddingStatus("pending");
+			}
+			if (knowledge.getCreateTime() == null) {
+				knowledge.setCreateTime(java.time.LocalDateTime.now());
+			}
+			if (knowledge.getUpdateTime() == null) {
+				knowledge.setUpdateTime(java.time.LocalDateTime.now());
+			}
+
 			// Create knowledge in database
 			agentKnowledgeService.createKnowledge(knowledge);
 
@@ -142,14 +163,17 @@ public class AgentKnowledgeController {
 			if (knowledge.getContent() != null && !knowledge.getContent().trim().isEmpty()
 					&& "active".equals(knowledge.getStatus())) {
 				try {
+					knowledge.setEmbeddingStatus("processing");
+					agentKnowledgeService.updateKnowledge(knowledge.getId(), knowledge);
+
 					agentKnowledgeService.addKnowledgeToVectorStore(Long.valueOf(knowledge.getAgentId()), knowledge);
-					// Update embedding status to completed
-					// knowledge.setEmbeddingStatus("completed");
+
+					knowledge.setEmbeddingStatus("completed");
 					agentKnowledgeService.updateKnowledge(knowledge.getId(), knowledge);
 				}
 				catch (Exception vectorException) {
 					// Vector storage failed, update embedding status to failed
-					// knowledge.setEmbeddingStatus("failed");
+					knowledge.setEmbeddingStatus("failed");
 					agentKnowledgeService.updateKnowledge(knowledge.getId(), knowledge);
 					// Log but don't affect main process
 					response.put("vectorWarning", "知识已保存，但向量化失败：" + vectorException.getMessage());
@@ -170,6 +194,95 @@ public class AgentKnowledgeController {
 		}
 	}
 
+    @PostMapping(value = "/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<Map<String, Object>> uploadKnowledgeDocument(@RequestParam("file") MultipartFile file,
+                                                                       @RequestParam("agentId") Integer agentId, @RequestParam("title") String title,
+                                                                       @RequestParam(value = "category", required = false) String category,
+                                                                       @RequestParam(value = "tags", required = false) String tags,
+                                                                       @RequestParam(value = "status", required = false, defaultValue = "active") String status) {
+
+        Map<String, Object> response = new HashMap<>();
+
+        try {
+            if (agentId == null) {
+                response.put("success", false);
+                response.put("message", "智能体ID不能为空");
+                return ResponseEntity.badRequest().body(response);
+            }
+
+            if (title == null || title.trim().isEmpty()) {
+                response.put("success", false);
+                response.put("message", "知识标题不能为空");
+                return ResponseEntity.badRequest().body(response);
+            }
+
+            if (file.isEmpty()) {
+                response.put("success", false);
+                response.put("message", "上传文件不能为空");
+                return ResponseEntity.badRequest().body(response);
+            }
+
+            String contentType = file.getContentType();
+            String originalFilename = file.getOriginalFilename();
+            if (contentType == null || originalFilename == null) {
+                response.put("success", false);
+                response.put("message", "无法识别文件类型");
+                return ResponseEntity.badRequest().body(response);
+            }
+
+            boolean isValidType = contentType.startsWith("text/") || contentType.equals("application/pdf")
+                    || contentType.equals("application/msword")
+                    || contentType.equals("application/vnd.openxmlformats-officedocument.wordprocessingml.document")
+                    || contentType.equals("application/vnd.ms-excel")
+                    || contentType.equals("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+
+            if (!isValidType) {
+                response.put("success", false);
+                response.put("message", "不支持的文件类型，仅支持文本、PDF、Word、Excel等文档格式");
+                return ResponseEntity.badRequest().body(response);
+            }
+
+            String filePath = fileStorageService.storeFile(file, "knowledge");
+            String fileUrl = fileStorageService.getFileUrl(filePath);
+
+            AgentKnowledge knowledge = new AgentKnowledge();
+            knowledge.setAgentId(agentId);
+            knowledge.setTitle(title);
+            knowledge.setType("document");
+            knowledge.setCategory(category);
+            knowledge.setTags(tags);
+            knowledge.setStatus(status);
+            knowledge.setFilePath(filePath);
+            knowledge.setFileSize(file.getSize());
+            knowledge.setFileType(contentType);
+            knowledge.setEmbeddingStatus("pending");
+
+            boolean created = agentKnowledgeService.createKnowledge(knowledge);
+
+            if (created) {
+                response.put("success", true);
+                response.put("data", knowledge);
+                response.put("fileUrl", fileUrl);
+                response.put("message", "文档上传成功");
+                log.info("文档上传成功，知识ID: {}, 文件路径: {}", knowledge.getId(), filePath);
+                return ResponseEntity.ok(response);
+            }
+            else {
+                fileStorageService.deleteFile(filePath);
+                response.put("success", false);
+                response.put("message", "知识创建失败");
+                return ResponseEntity.badRequest().body(response);
+            }
+
+        }
+        catch (Exception e) {
+            log.error("上传文档失败：{}", e.getMessage(), e);
+            response.put("success", false);
+            response.put("message", "上传文档失败：" + e.getMessage());
+            return ResponseEntity.internalServerError().body(response);
+        }
+    }
+
 	/**
 	 * Update knowledge
 	 */
@@ -180,19 +293,19 @@ public class AgentKnowledgeController {
 		Map<String, Object> response = new HashMap<>();
 
 		try {
-			// Validate required fields
-			if (knowledge.getTitle() == null || knowledge.getTitle().trim().isEmpty()) {
-				response.put("success", false);
-				response.put("message", "知识标题不能为空");
-				return ResponseEntity.badRequest().body(response);
-			}
-
 			// First get original knowledge information
 			AgentKnowledge originalKnowledge = agentKnowledgeService.getKnowledgeById(id);
 			if (originalKnowledge == null) {
 				response.put("success", false);
 				response.put("message", "知识不存在");
 				return ResponseEntity.notFound().build();
+			}
+
+			// Validate title only if it's being updated
+			if (knowledge.getTitle() != null && knowledge.getTitle().trim().isEmpty()) {
+				response.put("success", false);
+				response.put("message", "知识标题不能为空");
+				return ResponseEntity.badRequest().body(response);
 			}
 
 			// Update knowledge in database
@@ -214,27 +327,26 @@ public class AgentKnowledgeController {
 					if (statusChangedFromActive) {
 						// Status changes from active to other, delete vector data
 						agentKnowledgeService.deleteKnowledgeFromVectorStore(agentId, id);
-						// updatedKnowledge.setEmbeddingStatus("pending");
+						updatedKnowledge.setEmbeddingStatus("pending");
+						agentKnowledgeService.updateKnowledge(id, updatedKnowledge);
 					}
 					else if ((contentChanged || statusChangedToActive) && "active".equals(updatedKnowledge.getStatus())
 							&& updatedKnowledge.getContent() != null
 							&& !updatedKnowledge.getContent().trim().isEmpty()) {
 						// Content changes or status becomes active, re-vectorize
-						agentKnowledgeService.deleteKnowledgeFromVectorStore(agentId, id); // First
-						// delete
-						// old
-						agentKnowledgeService.addKnowledgeToVectorStore(agentId, updatedKnowledge); // Then
-						// add
-						// new
-						// updatedKnowledge.setEmbeddingStatus("completed");
-						agentKnowledgeService.updateKnowledge(id, updatedKnowledge); // Update
-																						// embedding
-																						// status
+						updatedKnowledge.setEmbeddingStatus("processing");
+						agentKnowledgeService.updateKnowledge(id, updatedKnowledge);
+
+						agentKnowledgeService.deleteKnowledgeFromVectorStore(agentId, id); // First delete old
+						agentKnowledgeService.addKnowledgeToVectorStore(agentId, updatedKnowledge); // Then add new
+
+						updatedKnowledge.setEmbeddingStatus("completed");
+						agentKnowledgeService.updateKnowledge(id, updatedKnowledge);
 					}
 				}
 				catch (Exception vectorException) {
 					// Vector storage operation failed, update embedding status to failed
-					// updatedKnowledge.setEmbeddingStatus("failed");
+					updatedKnowledge.setEmbeddingStatus("failed");
 					agentKnowledgeService.updateKnowledge(id, updatedKnowledge);
 					response.put("vectorWarning", "知识已更新，但向量化失败：" + vectorException.getMessage());
 				}
@@ -371,5 +483,41 @@ public class AgentKnowledgeController {
 			return ResponseEntity.badRequest().body(response);
 		}
 	}
+    @PostMapping("/query/page")
+    public ResponseEntity<Map<String, Object>> queryByPage(@RequestBody AgentKnowledgeQueryDTO queryDTO) {
+        Map<String, Object> response = new HashMap<>();
+
+        try {
+            if (queryDTO.getAgentId() == null) {
+                response.put("success", false);
+                response.put("message", "智能体ID不能为空");
+                return ResponseEntity.badRequest().body(response);
+            }
+
+            PageResult<AgentKnowledge> pageResult = agentKnowledgeService.queryByConditionsWithPage(queryDTO);
+
+            response.put("success", true);
+            response.put("data", pageResult.getData());
+            response.put("total", pageResult.getTotal());
+            response.put("pageNum", pageResult.getPageNum());
+            response.put("pageSize", pageResult.getPageSize());
+            response.put("totalPages", pageResult.getTotalPages());
+
+            return ResponseEntity.ok(response);
+
+        }
+        catch (IllegalArgumentException e) {
+            log.error("参数校验失败：{}", e.getMessage());
+            response.put("success", false);
+            response.put("message", e.getMessage());
+            return ResponseEntity.badRequest().body(response);
+        }
+        catch (Exception e) {
+            log.error("分页查询知识列表失败：{}", e.getMessage());
+            response.put("success", false);
+            response.put("message", "分页查询失败：" + e.getMessage());
+            return ResponseEntity.badRequest().body(response);
+        }
+    }
 
 }

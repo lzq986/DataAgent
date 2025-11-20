@@ -32,7 +32,7 @@ import java.util.List;
 public interface AgentKnowledgeMapper {
 
 	@Select("""
-			SELECT * FROM agent_knowledge WHERE agent_id = #{agentId} ORDER BY created_time DESC
+			SELECT * FROM agent_knowledge WHERE agent_id = #{agentId} ORDER BY create_time DESC
 			""")
 	List<AgentKnowledge> selectByAgentId(@Param("agentId") Integer agentId);
 
@@ -42,8 +42,8 @@ public interface AgentKnowledgeMapper {
 	AgentKnowledge selectById(@Param("id") Integer id);
 
 	@Insert("""
-			INSERT INTO agent_knowledge (agent_id, title, content, type, question, status, source_filename, file_path, file_size, created_time, updated_time)
-			VALUES (#{agentId}, #{title}, #{content}, #{type}, #{question}, #{status}, #{sourceFilename}, #{filePath}, #{fileSize}, #{createdTime}, #{updatedTime})
+			INSERT INTO agent_knowledge (agent_id, title, content, type, category, tags, status, source_url, file_path, file_size, file_type, embedding_status, creator_id, create_time, update_time)
+			VALUES (#{agentId}, #{title}, #{content}, #{type}, #{category}, #{tags}, #{status}, #{sourceUrl}, #{filePath}, #{fileSize}, #{fileType}, #{embeddingStatus}, #{creatorId}, #{createTime}, #{updateTime})
 			""")
 	@Options(useGeneratedKeys = true, keyProperty = "id", keyColumn = "id")
 	int insert(AgentKnowledge knowledge);
@@ -55,12 +55,15 @@ public interface AgentKnowledgeMapper {
 				<if test="title != null">title = #{title},</if>
 				<if test="content != null">content = #{content},</if>
 				<if test="type != null">type = #{type},</if>
-				<if test="question != null">question = #{question},</if>
+				<if test="category != null">category = #{category},</if>
+				<if test="tags != null">tags = #{tags},</if>
 				<if test="status != null">status = #{status},</if>
-				<if test="sourceFilename != null">source_filename = #{sourceFilename},</if>
+				<if test="sourceUrl != null">source_url = #{sourceUrl},</if>
 				<if test="filePath != null">file_path = #{filePath},</if>
 				<if test="fileSize != null">file_size = #{fileSize},</if>
-				updated_time = NOW()
+				<if test="fileType != null">file_type = #{fileType},</if>
+				<if test="embeddingStatus != null">embedding_status = #{embeddingStatus},</if>
+				update_time = NOW()
 			</set>
 			WHERE id = #{id}
 			</script>
@@ -73,26 +76,26 @@ public interface AgentKnowledgeMapper {
 	int deleteById(@Param("id") Integer id);
 
 	@Select("""
-			SELECT * FROM agent_knowledge WHERE agent_id = #{agentId} AND type = #{type} ORDER BY created_time DESC
+			SELECT * FROM agent_knowledge WHERE agent_id = #{agentId} AND type = #{type} ORDER BY create_time DESC
 			""")
 	List<AgentKnowledge> selectByAgentIdAndType(@Param("agentId") Integer agentId, @Param("type") String type);
 
 	@Select("""
-			SELECT * FROM agent_knowledge WHERE agent_id = #{agentId} AND status = #{status} ORDER BY created_time DESC
+			SELECT * FROM agent_knowledge WHERE agent_id = #{agentId} AND status = #{status} ORDER BY create_time DESC
 			""")
-	List<AgentKnowledge> selectByAgentIdAndStatus(@Param("agentId") Integer agentId, @Param("status") Integer status);
+	List<AgentKnowledge> selectByAgentIdAndStatus(@Param("agentId") Integer agentId, @Param("status") String status);
 
 	@Select("""
 			SELECT * FROM agent_knowledge WHERE agent_id = #{agentId} AND
-			(title LIKE CONCAT('%', #{keyword}, '%') OR content LIKE CONCAT('%', #{keyword}, '%') OR question LIKE CONCAT('%', #{keyword}, '%'))
-			ORDER BY created_time DESC
+			(title LIKE CONCAT('%', #{keyword}, '%') OR content LIKE CONCAT('%', #{keyword}, '%') OR tags LIKE CONCAT('%', #{keyword}, '%'))
+			ORDER BY create_time DESC
 			""")
 	List<AgentKnowledge> searchByAgentIdAndKeyword(@Param("agentId") Integer agentId, @Param("keyword") String keyword);
 
 	@Update("""
-			UPDATE agent_knowledge SET status = #{status}, updated_time = #{now} WHERE id = #{id}
+			UPDATE agent_knowledge SET status = #{status}, update_time = #{now} WHERE id = #{id}
 			""")
-	int updateStatus(@Param("id") Integer id, @Param("status") Integer status, @Param("now") LocalDateTime now);
+	int updateStatus(@Param("id") Integer id, @Param("status") String status, @Param("now") LocalDateTime now);
 
 	@Select("""
 			SELECT COUNT(*) FROM agent_knowledge WHERE agent_id = #{agentId}
@@ -104,4 +107,50 @@ public interface AgentKnowledgeMapper {
 			""")
 	List<Object[]> countByType(@Param("agentId") Integer agentId);
 
+    @Select("""
+			<script>
+			SELECT * FROM agent_knowledge
+			WHERE agent_id = #{agentId}
+			<if test="title != null and title != ''">
+				AND title LIKE CONCAT('%', #{title}, '%')
+			</if>
+			<if test="type != null and type != ''">
+				AND type = #{type}
+			</if>
+			<if test="sourceUrl != null and sourceUrl != ''">
+				AND source_url LIKE CONCAT('%', #{sourceUrl}, '%')
+			</if>
+			<if test="embeddingStatus != null and embeddingStatus != ''">
+				AND embedding_status = #{embeddingStatus}
+			</if>
+			ORDER BY ${sortField} ${sortOrder}
+			LIMIT #{offset}, #{pageSize}
+			</script>
+			""")
+    List<AgentKnowledge> selectByConditionsWithPage(@Param("agentId") Integer agentId, @Param("title") String title,
+                                                    @Param("type") String type, @Param("sourceUrl") String sourceUrl,
+                                                    @Param("embeddingStatus") String embeddingStatus, @Param("sortField") String sortField,
+                                                    @Param("sortOrder") String sortOrder, @Param("offset") Integer offset, @Param("pageSize") Integer pageSize);
+
+    @Select("""
+			<script>
+			SELECT COUNT(*) FROM agent_knowledge
+			WHERE agent_id = #{agentId}
+			<if test="title != null and title != ''">
+				AND title LIKE CONCAT('%', #{title}, '%')
+			</if>
+			<if test="type != null and type != ''">
+				AND type = #{type}
+			</if>
+			<if test="sourceUrl != null and sourceUrl != ''">
+				AND source_url LIKE CONCAT('%', #{sourceUrl}, '%')
+			</if>
+			<if test="embeddingStatus != null and embeddingStatus != ''">
+				AND embedding_status = #{embeddingStatus}
+			</if>
+			</script>
+			""")
+    Long countByConditions(@Param("agentId") Integer agentId, @Param("title") String title,
+                           @Param("type") String type, @Param("sourceUrl") String sourceUrl,
+                           @Param("embeddingStatus") String embeddingStatus);
 }

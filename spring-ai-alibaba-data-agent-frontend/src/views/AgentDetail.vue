@@ -147,6 +147,7 @@
           <AgentAccessApi v-else-if="activeMenuIndex === 'access-api'"></AgentAccessApi>
           <AgentKnowledgeConfig
             v-else-if="activeMenuIndex === 'agent-knowledge'"
+            :agent-id="agent.id"
           ></AgentKnowledgeConfig>
           <NotFound v-else></NotFound>
         </el-main>
