@@ -39,6 +39,39 @@ public class DataAgentProperties {
 
 	private VectorStoreProperties vectorStore = new VectorStoreProperties();
 
+	private TextSplitter textSplitter = new TextSplitter();
+
+	@Getter
+	@Setter
+	public static class TextSplitter {
+
+		/**
+		 * 默认分块大小，基于token数量 默认值：1000
+		 */
+		private int defaultChunkSize = 1000;
+
+		/**
+		 * 最小分块字符数 默认值：400
+		 */
+		private int minChunkSizeChars = 400;
+
+		/**
+		 * 嵌入最小分块长度 默认值：10
+		 */
+		private int minChunkLengthToEmbed = 10;
+
+		/**
+		 * 最大分块数量 默认值：5000
+		 */
+		private int maxNumChunks = 5000;
+
+		/**
+		 * 是否保留分隔符 默认值：true
+		 */
+		private boolean keepSeparator = true;
+
+	}
+
 	@Getter
 	@Setter
 	public static class EmbeddingBatch {

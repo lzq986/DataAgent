@@ -40,10 +40,10 @@ public final class DocumentMetadataConstant {
 	// 智能体的知识
 	public static final String AGENT_KNOWLEDGE = "agentKnowledge";
 
-	// 关联该文档在数据库中的记录id
-	public static final String DB_RECORD_ID = "dbRecordId";
-
 	// isRecall
 	public static final String IS_RECALL = "isRecall";
+
+	// answer
+	public static final String ANSWER = "answer";
 
 }

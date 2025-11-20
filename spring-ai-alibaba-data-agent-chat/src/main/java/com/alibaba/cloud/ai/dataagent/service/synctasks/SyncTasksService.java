@@ -16,8 +16,8 @@
 
 package com.alibaba.cloud.ai.dataagent.service.synctasks;
 
-import com.alibaba.cloud.ai.dataagent.constant.EntityType;
-import com.alibaba.cloud.ai.dataagent.constant.OperationType;
+import com.alibaba.cloud.ai.dataagent.enums.EntityType;
+import com.alibaba.cloud.ai.dataagent.enums.OperationType;
 import com.alibaba.cloud.ai.dataagent.entity.SyncTasks;
 
 import java.time.Duration;

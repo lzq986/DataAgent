@@ -17,40 +17,16 @@
 package com.alibaba.cloud.ai.dataagent.config;
 
 import com.alibaba.cloud.ai.dataagent.config.file.FileStorageProperties;
-import com.alibaba.cloud.ai.dataagent.dispatcher.FeasibilityAssessmentDispatcher;
-import com.alibaba.cloud.ai.dataagent.dispatcher.HumanFeedbackDispatcher;
-import com.alibaba.cloud.ai.dataagent.dispatcher.IntentRecognitionDispatcher;
-import com.alibaba.cloud.ai.dataagent.dispatcher.PlanExecutorDispatcher;
-import com.alibaba.cloud.ai.dataagent.dispatcher.PythonExecutorDispatcher;
-import com.alibaba.cloud.ai.dataagent.dispatcher.QueryEnhanceDispatcher;
-import com.alibaba.cloud.ai.dataagent.dispatcher.SQLExecutorDispatcher;
-import com.alibaba.cloud.ai.dataagent.dispatcher.SemanticConsistenceDispatcher;
-import com.alibaba.cloud.ai.dataagent.dispatcher.SqlGenerateDispatcher;
-import com.alibaba.cloud.ai.dataagent.dispatcher.TableRelationDispatcher;
-import com.alibaba.cloud.ai.dataagent.node.EvidenceRecallNode;
-import com.alibaba.cloud.ai.dataagent.node.FeasibilityAssessmentNode;
-import com.alibaba.cloud.ai.dataagent.node.HumanFeedbackNode;
-import com.alibaba.cloud.ai.dataagent.node.IntentRecognitionNode;
-import com.alibaba.cloud.ai.dataagent.node.PlanExecutorNode;
-import com.alibaba.cloud.ai.dataagent.node.PlannerNode;
-import com.alibaba.cloud.ai.dataagent.node.PythonAnalyzeNode;
-import com.alibaba.cloud.ai.dataagent.node.PythonExecuteNode;
-import com.alibaba.cloud.ai.dataagent.node.PythonGenerateNode;
-import com.alibaba.cloud.ai.dataagent.node.QueryEnhanceNode;
-import com.alibaba.cloud.ai.dataagent.node.ReportGeneratorNode;
-import com.alibaba.cloud.ai.dataagent.node.SchemaRecallNode;
-import com.alibaba.cloud.ai.dataagent.node.SemanticConsistencyNode;
-import com.alibaba.cloud.ai.dataagent.node.SqlExecuteNode;
-import com.alibaba.cloud.ai.dataagent.node.SqlGenerateNode;
-import com.alibaba.cloud.ai.dataagent.node.TableRelationNode;
+import com.alibaba.cloud.ai.dataagent.dispatcher.*;
+import com.alibaba.cloud.ai.dataagent.node.*;
 import com.alibaba.cloud.ai.dataagent.strategy.EnhancedTokenCountBatchingStrategy;
+import com.alibaba.cloud.ai.dataagent.util.NodeBeanUtil;
 import com.alibaba.cloud.ai.graph.GraphRepresentation;
 import com.alibaba.cloud.ai.graph.KeyStrategy;
 import com.alibaba.cloud.ai.graph.KeyStrategyFactory;
 import com.alibaba.cloud.ai.graph.StateGraph;
 import com.alibaba.cloud.ai.graph.exception.GraphStateException;
 import com.alibaba.cloud.ai.graph.state.strategy.ReplaceStrategy;
-import com.alibaba.cloud.ai.dataagent.util.NodeBeanUtil;
 import com.knuddels.jtokkit.api.EncodingType;
 import lombok.extern.slf4j.Slf4j;
 import org.jetbrains.annotations.NotNull;
@@ -58,6 +34,8 @@ import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.ai.embedding.BatchingStrategy;
 import org.springframework.ai.embedding.EmbeddingModel;
+import org.springframework.ai.transformer.splitter.TextSplitter;
+import org.springframework.ai.transformer.splitter.TokenTextSplitter;
 import org.springframework.ai.vectorstore.SimpleVectorStore;
 import org.springframework.ai.vectorstore.VectorStore;
 import org.springframework.beans.factory.DisposableBean;
@@ -337,6 +315,14 @@ public class DataAgentConfiguration implements DisposableBean {
 				Thread.currentThread().interrupt();
 			}
 		}
+	}
+
+	@Bean
+	public TextSplitter textSplitter(DataAgentProperties properties) {
+		DataAgentProperties.TextSplitter textSplitterProps = properties.getTextSplitter();
+		return new TokenTextSplitter(textSplitterProps.getDefaultChunkSize(), textSplitterProps.getMinChunkSizeChars(),
+				textSplitterProps.getMinChunkLengthToEmbed(), textSplitterProps.getMaxNumChunks(),
+				textSplitterProps.isKeepSeparator());
 	}
 
 }

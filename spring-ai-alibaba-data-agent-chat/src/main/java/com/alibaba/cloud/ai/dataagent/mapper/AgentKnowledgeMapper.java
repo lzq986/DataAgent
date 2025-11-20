@@ -17,7 +17,7 @@
 package com.alibaba.cloud.ai.dataagent.mapper;
 
 import com.alibaba.cloud.ai.dataagent.entity.AgentKnowledge;
-import org.apache.ibatis.annotations.Delete;
+import com.alibaba.cloud.ai.dataagent.enums.KnowledgeType;
 import org.apache.ibatis.annotations.Insert;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Options;
@@ -32,18 +32,18 @@ import java.util.List;
 public interface AgentKnowledgeMapper {
 
 	@Select("""
-			SELECT * FROM agent_knowledge WHERE agent_id = #{agentId} ORDER BY created_time DESC
+			SELECT * FROM agent_knowledge WHERE agent_id = #{agentId} AND is_deleted = 0 ORDER BY created_time DESC
 			""")
 	List<AgentKnowledge> selectByAgentId(@Param("agentId") Integer agentId);
 
 	@Select("""
-			SELECT * FROM agent_knowledge WHERE id = #{id}
+			SELECT * FROM agent_knowledge WHERE id = #{id} AND is_deleted = 0
 			""")
 	AgentKnowledge selectById(@Param("id") Integer id);
 
 	@Insert("""
 			INSERT INTO agent_knowledge (agent_id, title, content, type, question, status, source_filename, file_path, file_size, created_time, updated_time)
-			VALUES (#{agentId}, #{title}, #{content}, #{type}, #{question}, #{status}, #{sourceFilename}, #{filePath}, #{fileSize}, #{createdTime}, #{updatedTime})
+			VALUES (#{agentId}, #{title}, #{content}, #{type.code}, #{question}, #{status}, #{sourceFilename}, #{filePath}, #{fileSize}, #{createdTime}, #{updatedTime})
 			""")
 	@Options(useGeneratedKeys = true, keyProperty = "id", keyColumn = "id")
 	int insert(AgentKnowledge knowledge);
@@ -62,45 +62,45 @@ public interface AgentKnowledgeMapper {
 				<if test="fileSize != null">file_size = #{fileSize},</if>
 				updated_time = NOW()
 			</set>
-			WHERE id = #{id}
+			WHERE id = #{id} AND is_deleted = 0
 			</script>
 			""")
 	int update(AgentKnowledge knowledge);
 
-	@Delete("""
-			DELETE FROM agent_knowledge WHERE id = #{id}
+	@Update("""
+			UPDATE agent_knowledge SET is_deleted = 1, updated_time = NOW() WHERE id = #{id}
 			""")
 	int deleteById(@Param("id") Integer id);
 
 	@Select("""
-			SELECT * FROM agent_knowledge WHERE agent_id = #{agentId} AND type = #{type} ORDER BY created_time DESC
+			SELECT * FROM agent_knowledge WHERE agent_id = #{agentId} AND type = #{type.code} AND is_deleted = 0 ORDER BY created_time DESC
 			""")
-	List<AgentKnowledge> selectByAgentIdAndType(@Param("agentId") Integer agentId, @Param("type") String type);
+	List<AgentKnowledge> selectByAgentIdAndType(@Param("agentId") Integer agentId, @Param("type") KnowledgeType type);
 
 	@Select("""
-			SELECT * FROM agent_knowledge WHERE agent_id = #{agentId} AND status = #{status} ORDER BY created_time DESC
+			SELECT * FROM agent_knowledge WHERE agent_id = #{agentId} AND status = #{status} AND is_deleted = 0 ORDER BY created_time DESC
 			""")
 	List<AgentKnowledge> selectByAgentIdAndStatus(@Param("agentId") Integer agentId, @Param("status") Integer status);
 
 	@Select("""
-			SELECT * FROM agent_knowledge WHERE agent_id = #{agentId} AND
+			SELECT * FROM agent_knowledge WHERE agent_id = #{agentId} AND is_deleted = 0 AND
 			(title LIKE CONCAT('%', #{keyword}, '%') OR content LIKE CONCAT('%', #{keyword}, '%') OR question LIKE CONCAT('%', #{keyword}, '%'))
 			ORDER BY created_time DESC
 			""")
 	List<AgentKnowledge> searchByAgentIdAndKeyword(@Param("agentId") Integer agentId, @Param("keyword") String keyword);
 
 	@Update("""
-			UPDATE agent_knowledge SET status = #{status}, updated_time = #{now} WHERE id = #{id}
+			UPDATE agent_knowledge SET status = #{status}, updated_time = #{now} WHERE id = #{id} AND is_deleted = 0
 			""")
 	int updateStatus(@Param("id") Integer id, @Param("status") Integer status, @Param("now") LocalDateTime now);
 
 	@Select("""
-			SELECT COUNT(*) FROM agent_knowledge WHERE agent_id = #{agentId}
+			SELECT COUNT(*) FROM agent_knowledge WHERE agent_id = #{agentId} AND is_deleted = 0
 			""")
 	int countByAgentId(@Param("agentId") Integer agentId);
 
 	@Select("""
-			SELECT type, COUNT(*) as count FROM agent_knowledge WHERE agent_id = #{agentId} GROUP BY type
+			SELECT type, COUNT(*) as count FROM agent_knowledge WHERE agent_id = #{agentId} AND is_deleted = 0 GROUP BY type
 			""")
 	List<Object[]> countByType(@Param("agentId") Integer agentId);
 

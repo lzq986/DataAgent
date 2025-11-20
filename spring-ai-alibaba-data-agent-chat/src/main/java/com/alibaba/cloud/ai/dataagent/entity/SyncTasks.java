@@ -16,9 +16,9 @@
 
 package com.alibaba.cloud.ai.dataagent.entity;
 
-import com.alibaba.cloud.ai.dataagent.constant.EntityType;
-import com.alibaba.cloud.ai.dataagent.constant.OperationType;
-import com.alibaba.cloud.ai.dataagent.constant.TaskStatus;
+import com.alibaba.cloud.ai.dataagent.enums.EntityType;
+import com.alibaba.cloud.ai.dataagent.enums.OperationType;
+import com.alibaba.cloud.ai.dataagent.enums.TaskStatus;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import lombok.Builder;
 import lombok.Data;

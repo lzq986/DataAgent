@@ -19,18 +19,16 @@ package com.alibaba.cloud.ai.dataagent.service.knowledge;
 import com.alibaba.cloud.ai.dataagent.constant.Constant;
 import com.alibaba.cloud.ai.dataagent.constant.DocumentMetadataConstant;
 import com.alibaba.cloud.ai.dataagent.entity.AgentKnowledge;
+import com.alibaba.cloud.ai.dataagent.enums.KnowledgeType;
 import com.alibaba.cloud.ai.dataagent.mapper.AgentKnowledgeMapper;
 import com.alibaba.cloud.ai.dataagent.service.vectorstore.AgentVectorStoreService;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.ai.document.Document;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-
-import static com.alibaba.cloud.ai.dataagent.util.DocumentConverterUtil.createDocumentFromKnowledge;
 
 @Slf4j
 @Service
@@ -62,7 +60,7 @@ public class AgentKnowledgeServiceImpl implements AgentKnowledgeService {
 
 		// Set default values
 		if (knowledge.getType() == null) {
-			knowledge.setType("document");
+			knowledge.setType(KnowledgeType.DOCUMENT);
 		}
 		// if (knowledge.getStatus() == null) {
 		// knowledge.setStatus("active");
@@ -98,7 +96,7 @@ public class AgentKnowledgeServiceImpl implements AgentKnowledgeService {
 	}
 
 	@Override
-	public List<AgentKnowledge> getKnowledgeByType(Integer agentId, String type) {
+	public List<AgentKnowledge> getKnowledgeByType(Integer agentId, KnowledgeType type) {
 		return agentKnowledgeMapper.selectByAgentIdAndType(agentId, type);
 	}
 
@@ -140,10 +138,10 @@ public class AgentKnowledgeServiceImpl implements AgentKnowledgeService {
 			log.info("Adding knowledge to vector store for agent: {}, knowledge ID: {}", agentIdStr, knowledge.getId());
 
 			// Create document
-			Document document = createDocumentFromKnowledge(agentIdStr, knowledge);
+			// Document document = createDocumentFromKnowledge(agentIdStr, knowledge);
 
 			// Add to vector store
-			vectorStoreService.addDocuments(agentIdStr, List.of(document));
+			// vectorStoreService.addDocuments(agentIdStr, List.of(document));
 
 			log.info("Successfully added knowledge to vector store for agent: {}", agentIdStr);
 		}

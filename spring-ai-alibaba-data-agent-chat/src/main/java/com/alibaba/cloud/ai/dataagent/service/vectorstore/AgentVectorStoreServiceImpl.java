@@ -289,6 +289,13 @@ public class AgentVectorStoreServiceImpl implements AgentVectorStoreService {
 		return true;
 	}
 
+	@Override
+	public void deleteDocumentsByIds(List<String> docIds) {
+		if (null == docIds || docIds.isEmpty())
+			return;
+		vectorStore.delete(docIds);
+	}
+
 	private void batchDelDocumentsWithFilter(String filterExpression) {
 		Set<String> seenDocumentIds = new HashSet<>();
 		// 分批获取，因为Milvus等向量数据库的topK有限制

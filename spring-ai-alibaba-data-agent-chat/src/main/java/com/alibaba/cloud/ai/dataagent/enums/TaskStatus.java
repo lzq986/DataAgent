@@ -14,31 +14,31 @@
  * limitations under the License.
  */
 
-package com.alibaba.cloud.ai.dataagent.constant;
+package com.alibaba.cloud.ai.dataagent.enums;
 
 import lombok.Getter;
 
 /**
- * 同步任务实体类型枚举
+ * 同步任务状态枚举
  */
 @Getter
-public enum EntityType {
+public enum TaskStatus {
 
-	AGENT_KNOWLEDGE("AGENT_KNOWLEDGE"), BUSINESS_TERM("BUSINESS_TERM");
+	PENDING("PENDING"), PROCESSING("PROCESSING"), COMPLETED("COMPLETED"), FAILED("FAILED");
 
 	private final String value;
 
-	EntityType(String value) {
+	TaskStatus(String value) {
 		this.value = value;
 	}
 
-	public static EntityType fromValue(String value) {
-		for (EntityType type : EntityType.values()) {
-			if (type.value.equals(value)) {
-				return type;
+	public static TaskStatus fromValue(String value) {
+		for (TaskStatus status : TaskStatus.values()) {
+			if (status.value.equals(value)) {
+				return status;
 			}
 		}
-		throw new IllegalArgumentException("Unknown entity type: " + value);
+		throw new IllegalArgumentException("Unknown task status: " + value);
 	}
 
 }

@@ -17,6 +17,7 @@
 package com.alibaba.cloud.ai.dataagent.service.knowledge;
 
 import com.alibaba.cloud.ai.dataagent.entity.AgentKnowledge;
+import com.alibaba.cloud.ai.dataagent.enums.KnowledgeType;
 
 import java.util.List;
 
@@ -32,7 +33,7 @@ public interface AgentKnowledgeService {
 
 	boolean deleteKnowledge(Integer id);
 
-	List<AgentKnowledge> getKnowledgeByType(Integer agentId, String type);
+	List<AgentKnowledge> getKnowledgeByType(Integer agentId, KnowledgeType type);
 
 	List<AgentKnowledge> getKnowledgeByStatus(Integer agentId, String status);
 

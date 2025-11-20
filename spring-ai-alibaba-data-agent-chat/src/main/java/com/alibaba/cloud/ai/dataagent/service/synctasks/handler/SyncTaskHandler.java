@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright 2024-2025 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -14,31 +14,26 @@
  * limitations under the License.
  */
 
-package com.alibaba.cloud.ai.dataagent.constant;
+package com.alibaba.cloud.ai.dataagent.service.synctasks.handler;
 
-import lombok.Getter;
+import com.alibaba.cloud.ai.dataagent.entity.SyncTasks;
 
 /**
- * 同步任务操作类型枚举
+ * 同步任务处理器接口
  */
-@Getter
-public enum OperationType {
+public interface SyncTaskHandler {
 
-	EXECUTE_VECTORIZE("EXECUTE_VECTORIZE"), DELETE_VECTOR("DELETE_VECTOR");
+	/**
+	 * 处理同步任务
+	 * @param task 同步任务
+	 * @return 处理结果，true表示成功，false表示失败
+	 */
+	boolean handle(SyncTasks task);
 
-	private final String value;
-
-	OperationType(String value) {
-		this.value = value;
-	}
-
-	public static OperationType fromValue(String value) {
-		for (OperationType type : OperationType.values()) {
-			if (type.value.equals(value)) {
-				return type;
-			}
-		}
-		throw new IllegalArgumentException("Unknown operation type: " + value);
-	}
+	/**
+	 * 获取支持的实体类型
+	 * @return 支持的实体类型
+	 */
+	String getSupportedEntityType();
 
 }

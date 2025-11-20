@@ -16,6 +16,7 @@
 
 package com.alibaba.cloud.ai.dataagent.entity;
 
+import com.alibaba.cloud.ai.dataagent.enums.KnowledgeType;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -37,13 +38,13 @@ public class AgentKnowledge {
 
 	private String title;
 
-	private String type; // DOCUMENT, QA, FAQ
+	private KnowledgeType type; // DOCUMENT, QA, FAQ
 
 	private String question; // 仅当type为QA或FAQ时使用
 
 	private String content; // 对于QA/FAQ是答案; 对于DOCUMENT, 此字段通常为空
 
-	private Integer status; // 业务状态: 1=启用, 0=禁用
+	private Integer isRecall; // 业务状态: 1=召回, 0=非召回
 
 	private String sourceFilename; // 上传时的原始文件名
 
@@ -56,5 +57,7 @@ public class AgentKnowledge {
 
 	@JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
 	private LocalDateTime updatedTime;
+
+	private Integer isDeleted;// 0=未删除, 1=已删除
 
 }

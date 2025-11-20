@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright 2024-2025 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -14,31 +14,26 @@
  * limitations under the License.
  */
 
-package com.alibaba.cloud.ai.dataagent.constant;
+package com.alibaba.cloud.ai.dataagent.service.synctasks.strategy;
 
-import lombok.Getter;
+import com.alibaba.cloud.ai.dataagent.entity.SyncTasks;
 
 /**
- * 同步任务状态枚举
+ * 向量化策略接口
  */
-@Getter
-public enum TaskStatus {
+public interface VectorizeStrategy {
 
-	PENDING("PENDING"), PROCESSING("PROCESSING"), COMPLETED("COMPLETED"), FAILED("FAILED");
+	/**
+	 * 执行向量化操作
+	 * @param task 同步任务
+	 * @return 是否成功
+	 */
+	boolean vectorize(SyncTasks task);
 
-	private final String value;
-
-	TaskStatus(String value) {
-		this.value = value;
-	}
-
-	public static TaskStatus fromValue(String value) {
-		for (TaskStatus status : TaskStatus.values()) {
-			if (status.value.equals(value)) {
-				return status;
-			}
-		}
-		throw new IllegalArgumentException("Unknown task status: " + value);
-	}
+	/**
+	 * 获取支持的实体类型
+	 * @return 实体类型
+	 */
+	String getSupportedEntityType();
 
 }
