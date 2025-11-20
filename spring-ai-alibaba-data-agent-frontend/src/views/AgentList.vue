@@ -110,7 +110,7 @@
               <el-card
                 class="agent-card"
                 :body-style="{ padding: '20px' }"
-                @click="enterAgent(agent.id)"
+                @click="agent.id && enterAgent(agent.id)"
               >
                 <div class="agent-content">
                   <!-- 删除按钮 -->
@@ -225,9 +225,9 @@
           const keyword = searchKeyword.value.toLowerCase();
           filtered = filtered.filter(
             (agent: Agent) =>
-              agent.name.toLowerCase().includes(keyword) ||
-              agent.description.toLowerCase().includes(keyword) ||
-              agent.id.toString().includes(keyword),
+              agent.name?.toLowerCase().includes(keyword) ||
+              agent.description?.toLowerCase().includes(keyword) ||
+              agent.id?.toString().includes(keyword),
           );
         }
 
@@ -251,11 +251,12 @@
         }
       };
 
-      const enterAgent = (agentId: string) => {
+      const enterAgent = (agentId: number | string) => {
         router.push(`/agent/${agentId}`);
       };
 
-      const getStatusText = (status: string) => {
+      const getStatusText = (status: string | undefined) => {
+        if (!status) return '';
         const statusMap: Record<string, string> = {
           published: '已发布',
           draft: '草稿',
@@ -264,7 +265,8 @@
         return statusMap[status] || status;
       };
 
-      const getStatusTagType = (status: string) => {
+      const getStatusTagType = (status: string | undefined) => {
+        if (!status) return 'info';
         const typeMap: Record<string, 'success' | 'warning' | 'info'> = {
           published: 'success',
           draft: 'warning',
@@ -273,9 +275,10 @@
         return typeMap[status] || 'info';
       };
 
-      const formatTime = (time: string) => {
+      const formatTime = (time: string | Date | undefined) => {
         if (!time) return '';
-        return time.replace(/\//g, '/');
+        const timeStr = typeof time === 'string' ? time : time.toISOString();
+        return timeStr.replace(/\//g, '/');
       };
 
       const goToCreateAgent = () => {

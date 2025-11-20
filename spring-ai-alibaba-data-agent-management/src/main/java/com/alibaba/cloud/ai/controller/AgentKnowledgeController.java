@@ -16,10 +16,14 @@
 
 package com.alibaba.cloud.ai.controller;
 
+import com.alibaba.cloud.ai.dto.AgentKnowledgeQueryDTO;
+import com.alibaba.cloud.ai.dto.PageResult;
 import com.alibaba.cloud.ai.entity.AgentKnowledge;
+import com.alibaba.cloud.ai.service.file.FileStorageService;
 import com.alibaba.cloud.ai.service.knowledge.AgentKnowledgeService;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -31,6 +35,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.HashMap;
 import java.util.List;
@@ -48,6 +53,8 @@ import java.util.Map;
 public class AgentKnowledgeController {
 
 	private final AgentKnowledgeService agentKnowledgeService;
+
+	private final FileStorageService fileStorageService;
 
 	/**
 	 * Query knowledge list by agent ID
@@ -177,6 +184,95 @@ public class AgentKnowledgeController {
 		}
 	}
 
+	@PostMapping(value = "/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+	public ResponseEntity<Map<String, Object>> uploadKnowledgeDocument(@RequestParam("file") MultipartFile file,
+			@RequestParam("agentId") Integer agentId, @RequestParam("title") String title,
+			@RequestParam(value = "category", required = false) String category,
+			@RequestParam(value = "tags", required = false) String tags,
+			@RequestParam(value = "status", required = false, defaultValue = "active") String status) {
+
+		Map<String, Object> response = new HashMap<>();
+
+		try {
+			if (agentId == null) {
+				response.put("success", false);
+				response.put("message", "智能体ID不能为空");
+				return ResponseEntity.badRequest().body(response);
+			}
+
+			if (title == null || title.trim().isEmpty()) {
+				response.put("success", false);
+				response.put("message", "知识标题不能为空");
+				return ResponseEntity.badRequest().body(response);
+			}
+
+			if (file.isEmpty()) {
+				response.put("success", false);
+				response.put("message", "上传文件不能为空");
+				return ResponseEntity.badRequest().body(response);
+			}
+
+			String contentType = file.getContentType();
+			String originalFilename = file.getOriginalFilename();
+			if (contentType == null || originalFilename == null) {
+				response.put("success", false);
+				response.put("message", "无法识别文件类型");
+				return ResponseEntity.badRequest().body(response);
+			}
+
+			boolean isValidType = contentType.startsWith("text/") || contentType.equals("application/pdf")
+					|| contentType.equals("application/msword")
+					|| contentType.equals("application/vnd.openxmlformats-officedocument.wordprocessingml.document")
+					|| contentType.equals("application/vnd.ms-excel")
+					|| contentType.equals("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+
+			if (!isValidType) {
+				response.put("success", false);
+				response.put("message", "不支持的文件类型，仅支持文本、PDF、Word、Excel等文档格式");
+				return ResponseEntity.badRequest().body(response);
+			}
+
+			String filePath = fileStorageService.storeFile(file, "knowledge");
+			String fileUrl = fileStorageService.getFileUrl(filePath);
+
+			AgentKnowledge knowledge = new AgentKnowledge();
+			knowledge.setAgentId(agentId);
+			knowledge.setTitle(title);
+			knowledge.setType("document");
+			knowledge.setCategory(category);
+			knowledge.setTags(tags);
+			knowledge.setStatus(status);
+			knowledge.setFilePath(filePath);
+			knowledge.setFileSize(file.getSize());
+			knowledge.setFileType(contentType);
+			knowledge.setEmbeddingStatus("pending");
+
+			boolean created = agentKnowledgeService.createKnowledge(knowledge);
+
+			if (created) {
+				response.put("success", true);
+				response.put("data", knowledge);
+				response.put("fileUrl", fileUrl);
+				response.put("message", "文档上传成功");
+				log.info("文档上传成功，知识ID: {}, 文件路径: {}", knowledge.getId(), filePath);
+				return ResponseEntity.ok(response);
+			}
+			else {
+				fileStorageService.deleteFile(filePath);
+				response.put("success", false);
+				response.put("message", "知识创建失败");
+				return ResponseEntity.badRequest().body(response);
+			}
+
+		}
+		catch (Exception e) {
+			log.error("上传文档失败：{}", e.getMessage(), e);
+			response.put("success", false);
+			response.put("message", "上传文档失败：" + e.getMessage());
+			return ResponseEntity.internalServerError().body(response);
+		}
+	}
+
 	/**
 	 * Update knowledge
 	 */
@@ -187,19 +283,18 @@ public class AgentKnowledgeController {
 		Map<String, Object> response = new HashMap<>();
 
 		try {
-			// Validate required fields
-			if (knowledge.getTitle() == null || knowledge.getTitle().trim().isEmpty()) {
-				response.put("success", false);
-				response.put("message", "知识标题不能为空");
-				return ResponseEntity.badRequest().body(response);
-			}
-
 			// First get original knowledge information
 			AgentKnowledge originalKnowledge = agentKnowledgeService.getKnowledgeById(id);
 			if (originalKnowledge == null) {
 				response.put("success", false);
 				response.put("message", "知识不存在");
 				return ResponseEntity.notFound().build();
+			}
+
+			if (knowledge.getTitle() != null && knowledge.getTitle().trim().isEmpty()) {
+				response.put("success", false);
+				response.put("message", "知识标题不能为空");
+				return ResponseEntity.badRequest().body(response);
 			}
 
 			// Update knowledge in database
@@ -375,6 +470,46 @@ public class AgentKnowledgeController {
 			log.error("获取统计信息失败：{}", e.getMessage());
 			response.put("success", false);
 			response.put("message", "获取统计信息失败：" + e.getMessage());
+			return ResponseEntity.badRequest().body(response);
+		}
+	}
+
+	/**
+	 * Pagination query knowledge list
+	 */
+	@PostMapping("/query/page")
+	public ResponseEntity<Map<String, Object>> queryByPage(@RequestBody AgentKnowledgeQueryDTO queryDTO) {
+		Map<String, Object> response = new HashMap<>();
+
+		try {
+			if (queryDTO.getAgentId() == null) {
+				response.put("success", false);
+				response.put("message", "智能体ID不能为空");
+				return ResponseEntity.badRequest().body(response);
+			}
+
+			PageResult<AgentKnowledge> pageResult = agentKnowledgeService.queryByConditionsWithPage(queryDTO);
+
+			response.put("success", true);
+			response.put("data", pageResult.getData());
+			response.put("total", pageResult.getTotal());
+			response.put("pageNum", pageResult.getPageNum());
+			response.put("pageSize", pageResult.getPageSize());
+			response.put("totalPages", pageResult.getTotalPages());
+
+			return ResponseEntity.ok(response);
+
+		}
+		catch (IllegalArgumentException e) {
+			log.error("参数校验失败：{}", e.getMessage());
+			response.put("success", false);
+			response.put("message", e.getMessage());
+			return ResponseEntity.badRequest().body(response);
+		}
+		catch (Exception e) {
+			log.error("分页查询知识列表失败：{}", e.getMessage());
+			response.put("success", false);
+			response.put("message", "分页查询失败：" + e.getMessage());
 			return ResponseEntity.badRequest().body(response);
 		}
 	}

@@ -109,4 +109,51 @@ public interface AgentKnowledgeMapper {
 			""")
 	List<Object[]> countByType(@Param("agentId") Integer agentId);
 
+	@Select("""
+			<script>
+			SELECT * FROM agent_knowledge
+			WHERE agent_id = #{agentId}
+			<if test="title != null and title != ''">
+				AND title LIKE CONCAT('%', #{title}, '%')
+			</if>
+			<if test="type != null and type != ''">
+				AND type = #{type}
+			</if>
+			<if test="sourceUrl != null and sourceUrl != ''">
+				AND source_url LIKE CONCAT('%', #{sourceUrl}, '%')
+			</if>
+			<if test="embeddingStatus != null and embeddingStatus != ''">
+				AND embedding_status = #{embeddingStatus}
+			</if>
+			ORDER BY ${sortField} ${sortOrder}
+			LIMIT #{offset}, #{pageSize}
+			</script>
+			""")
+	List<AgentKnowledge> selectByConditionsWithPage(@Param("agentId") Integer agentId, @Param("title") String title,
+			@Param("type") String type, @Param("sourceUrl") String sourceUrl,
+			@Param("embeddingStatus") String embeddingStatus, @Param("sortField") String sortField,
+			@Param("sortOrder") String sortOrder, @Param("offset") Integer offset, @Param("pageSize") Integer pageSize);
+
+	@Select("""
+			<script>
+			SELECT COUNT(*) FROM agent_knowledge
+			WHERE agent_id = #{agentId}
+			<if test="title != null and title != ''">
+				AND title LIKE CONCAT('%', #{title}, '%')
+			</if>
+			<if test="type != null and type != ''">
+				AND type = #{type}
+			</if>
+			<if test="sourceUrl != null and sourceUrl != ''">
+				AND source_url LIKE CONCAT('%', #{sourceUrl}, '%')
+			</if>
+			<if test="embeddingStatus != null and embeddingStatus != ''">
+				AND embedding_status = #{embeddingStatus}
+			</if>
+			</script>
+			""")
+	Long countByConditions(@Param("agentId") Integer agentId, @Param("title") String title,
+			@Param("type") String type, @Param("sourceUrl") String sourceUrl,
+			@Param("embeddingStatus") String embeddingStatus);
+
 }

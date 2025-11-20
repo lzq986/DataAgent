@@ -146,6 +146,10 @@
 
       const updateAgent = async () => {
         try {
+          if (!props.agent.id) {
+            ElMessage.error('更新失败：智能体 ID 不存在');
+            return;
+          }
           const agent = await agentService.update(props.agent.id, props.agent);
           if (agent === null) {
             console.error('更新智能体失败:', agent);
@@ -153,9 +157,10 @@
           } else {
             ElMessage.success('更新成功！');
           }
-        } catch (e) {
-          console.error('更新智能体失败:', e);
-          ElMessage.error('更新失败：' + (e.message || '未知错误'));
+        } catch (e: unknown) {
+          const error = e as Error;
+          console.error('更新智能体失败:', error);
+          ElMessage.error('更新失败：' + (error.message || '未知错误'));
         }
       };
 
@@ -172,6 +177,10 @@
             },
           );
 
+          if (!props.agent.id) {
+            ElMessage.error('删除失败：智能体 ID 不存在');
+            return;
+          }
           const result = await agentService.delete(props.agent.id);
           if (result) {
             ElMessage.success('智能体已删除');
@@ -184,9 +193,9 @@
         }
       };
 
-      const formatDateTime = (dateString: string): string => {
+      const formatDateTime = (dateString: string | Date | undefined): string => {
         if (!dateString) return '-';
-        const date = new Date(dateString);
+        const date = typeof dateString === 'string' ? new Date(dateString) : dateString;
         return date.toLocaleString('zh-CN', {
           year: 'numeric',
           month: '2-digit',

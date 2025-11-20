@@ -16,6 +16,8 @@
 
 package com.alibaba.cloud.ai.service.knowledge;
 
+import com.alibaba.cloud.ai.dto.AgentKnowledgeQueryDTO;
+import com.alibaba.cloud.ai.dto.PageResult;
 import com.alibaba.cloud.ai.entity.AgentKnowledge;
 
 import java.util.List;
@@ -47,5 +49,7 @@ public interface AgentKnowledgeService {
 	void addKnowledgeToVectorStore(Long agentId, AgentKnowledge knowledge);
 
 	void deleteKnowledgeFromVectorStore(Long agentId, Integer knowledgeId);
+
+	PageResult<AgentKnowledge> queryByConditionsWithPage(AgentKnowledgeQueryDTO queryDTO);
 
 }

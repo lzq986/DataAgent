@@ -95,7 +95,7 @@
 
         <!-- 人类反馈区域 -->
         <HumanFeedback
-          v-if="showHumanFeedback"
+          v-if="showHumanFeedback && lastRequest"
           :request="lastRequest"
           :handleFeedback="handleHumanFeedback"
         />
@@ -249,11 +249,13 @@
     },
     created() {
       window.copyTextToClipboard = btn => {
-        const text = btn.previousElementSibling.textContent;
+        const prevElement = btn.previousElementSibling;
+        if (!prevElement) return;
+        const text = prevElement.textContent;
         const originalText = btn.textContent;
 
         navigator.clipboard
-          .writeText(text)
+          .writeText(text || '')
           .then(() => {
             btn.textContent = '已复制!';
             setTimeout(() => {
@@ -410,8 +412,6 @@
             nl2sqlOnly: requestOptions.value.nl2sqlOnly,
             plainReport: requestOptions.value.plainReport,
             rejectedPlan: false,
-            humanFeedbackContent: null,
-            threadId: null,
           };
 
           userInput.value = '';
@@ -450,21 +450,25 @@
               messageType: 'html',
             };
 
-            return ChatService.saveMessage(currentSession.value!.id, aiMessage).catch(error => {
-              console.error('保存AI消息失败:', error);
-            });
+            return ChatService.saveMessage(currentSession.value!.id, aiMessage)
+              .then(() => {})
+              .catch(error => {
+                console.error('保存AI消息失败:', error);
+              });
           };
 
           // 发送流式请求
           const closeStream = await GraphService.streamSearch(
             request,
-            (response: GraphNodeResponse) => {
+            async (response: GraphNodeResponse) => {
               if (response.error) {
                 ElMessage.error(`处理错误: ${response.text}`);
                 return;
               }
 
-              lastRequest.value.threadId = response.threadId;
+              if (lastRequest.value) {
+                lastRequest.value.threadId = response.threadId;
+              }
 
               // 检查是否是报告节点
               if (response.nodeName === 'ReportGeneratorNode') {
@@ -493,13 +497,13 @@
                   htmlReportSize.value = htmlReportContent.value.length;
 
                   // 更新显示：当前已经收集了多少字节的报告
-                  const reportNode: GraphNodeResponse[] = nodeBlocks.value.find(
+                  const reportNode: GraphNodeResponse[] | undefined = nodeBlocks.value.find(
                     (block: GraphNodeResponse[]) =>
                       block.length > 0 &&
                       block[0].nodeName === 'ReportGeneratorNode' &&
                       block[0].textType === 'HTML',
                   );
-                  if (reportNode) {
+                  if (reportNode && reportNode.length > 0) {
                     reportNode[0].text = `正在收集HTML报告... 已收集 ${htmlReportSize.value} 字节`;
                   } else {
                     nodeBlocks.value.push([
@@ -741,9 +745,10 @@
                 resultSetDisplayConfig.value.pageSize,
               );
               content += tableHtml;
-            } catch (error) {
-              console.error('解析结果集JSON失败:', error);
-              content += `<div class="result-set-error">解析结果集数据失败: ${error.message}</div>`;
+            } catch (error: unknown) {
+              const err = error as Error;
+              console.error('解析结果集JSON失败:', err);
+              content += `<div class="result-set-error">解析结果集数据失败: ${err.message}</div>`;
             }
           } else {
             console.warn(`不支持的 textType: ${node[idx].textType}`);

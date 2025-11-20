@@ -125,7 +125,7 @@
           <!-- 右侧内容-->
           <AgentBaseSetting v-if="activeMenuIndex === 'basic'" :agent="agent"></AgentBaseSetting>
           <AgentDataSourceConfig
-            v-else-if="activeMenuIndex === 'datasource'"
+            v-else-if="activeMenuIndex === 'datasource' && agent.id"
             :agent-id="agent.id"
           ></AgentDataSourceConfig>
           <AgentPromptConfig
@@ -133,20 +133,21 @@
             :agent-prompt="agent.prompt"
           ></AgentPromptConfig>
           <BusinessKnowledgeConfig
-            v-else-if="activeMenuIndex === 'business-knowledge'"
+            v-else-if="activeMenuIndex === 'business-knowledge' && agent.id"
             :agent-id="agent.id"
           ></BusinessKnowledgeConfig>
           <AgentSemanticsConfig
-            v-else-if="activeMenuIndex === 'semantic-model'"
+            v-else-if="activeMenuIndex === 'semantic-model' && agent.id"
             :agent-id="agent.id"
           ></AgentSemanticsConfig>
           <AgentPresetsConfig
-            v-else-if="activeMenuIndex === 'preset-questions'"
+            v-else-if="activeMenuIndex === 'preset-questions' && agent.id"
             :agent-id="agent.id"
           ></AgentPresetsConfig>
           <AgentAccessApi v-else-if="activeMenuIndex === 'access-api'"></AgentAccessApi>
           <AgentKnowledgeConfig
-            v-else-if="activeMenuIndex === 'agent-knowledge'"
+            v-else-if="activeMenuIndex === 'agent-knowledge' && agent.id"
+            :agent-id="agent.id"
           ></AgentKnowledgeConfig>
           <NotFound v-else></NotFound>
         </el-main>
@@ -214,16 +215,12 @@
       // 响应式数据
       const activeMenuIndex: Ref<string> = ref('basic');
       const agent: Ref<Agent> = ref({
-        id: '',
         name: 'loading...',
         description: '',
         status: 'draft',
-        createdAt: '',
-        updatedAt: '',
         avatar: '',
         prompt: '',
         category: '',
-        adminId: '',
         tags: '',
         humanReviewEnabled: false,
       } as Agent);
@@ -258,11 +255,14 @@
         try {
           headerUploading.value = true;
 
-          originalHeaderAvatar.value = agent.value.avatar;
+          originalHeaderAvatar.value = agent.value.avatar ?? '';
 
           const reader = new FileReader();
           reader.onload = e => {
-            agent.value.avatar = e.target?.result as string;
+            const result = e.target?.result;
+            if (typeof result === 'string') {
+              agent.value.avatar = result;
+            }
           };
           reader.readAsDataURL(file);
 
@@ -300,7 +300,8 @@
       const loadAgent = async () => {
         try {
           const id = router.currentRoute.value.params.id;
-          const loadAgent = await AgentService.get(id);
+          const idNumber = Array.isArray(id) ? parseInt(id[0]) : parseInt(id as string);
+          const loadAgent = await AgentService.get(idNumber);
           if (loadAgent) {
             agent.value = loadAgent;
           } else {

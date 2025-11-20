@@ -137,17 +137,38 @@ public class DocumentConverterUtil {
 
 		Map<String, Object> metadata = new HashMap<>();
 		metadata.put("agentId", agentId);
-		metadata.put("knowledgeId", knowledge.getId());
-		metadata.put("title", knowledge.getTitle());
-		metadata.put("type", knowledge.getType());
-		metadata.put("category", knowledge.getCategory());
-		metadata.put("tags", knowledge.getTags());
-		metadata.put("status", knowledge.getStatus());
-		metadata.put("vectorType", "knowledge:" + knowledge.getType());
-		metadata.put("sourceUrl", knowledge.getSourceUrl());
-		metadata.put("fileType", knowledge.getFileType());
-		metadata.put("embeddingStatus", knowledge.getEmbeddingStatus());
-		metadata.put("createTime", knowledge.getCreateTime());
+
+		if (knowledge.getId() != null) {
+			metadata.put("knowledgeId", knowledge.getId());
+		}
+		if (knowledge.getTitle() != null) {
+			metadata.put("title", knowledge.getTitle());
+		}
+		if (knowledge.getType() != null) {
+			metadata.put("type", knowledge.getType());
+			metadata.put("vectorType", "knowledge:" + knowledge.getType());
+		}
+		if (knowledge.getCategory() != null) {
+			metadata.put("category", knowledge.getCategory());
+		}
+		if (knowledge.getTags() != null) {
+			metadata.put("tags", knowledge.getTags());
+		}
+		if (knowledge.getStatus() != null) {
+			metadata.put("status", knowledge.getStatus());
+		}
+		if (knowledge.getSourceUrl() != null) {
+			metadata.put("sourceUrl", knowledge.getSourceUrl());
+		}
+		if (knowledge.getFileType() != null) {
+			metadata.put("fileType", knowledge.getFileType());
+		}
+		if (knowledge.getEmbeddingStatus() != null) {
+			metadata.put("embeddingStatus", knowledge.getEmbeddingStatus());
+		}
+		if (knowledge.getCreateTime() != null) {
+			metadata.put("createTime", knowledge.getCreateTime());
+		}
 
 		return new Document(content, metadata);
 	}

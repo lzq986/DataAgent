@@ -545,7 +545,7 @@
         if (value === null || value === undefined) {
           selectedDatasourceId.value = null;
         } else {
-          selectedDatasourceId.value = value.id;
+          selectedDatasourceId.value = value.id ?? null;
         }
       };
 
@@ -590,7 +590,7 @@
           }
 
           const response: ApiResponse<null> = await agentDatasourceService.initSchema(
-            props.agentId,
+            String(props.agentId),
           );
           if (response.success === undefined || response.success == null || !response.success) {
             ElMessage.error(`初始化数据源失败`);
@@ -611,7 +611,7 @@
         const datasourceId = row.id;
         try {
           const response: ApiResponse = await agentDatasourceService.toggleDatasourceForAgent(
-            props.agentId,
+            String(props.agentId),
             { datasourceId, isActive: active },
           );
           if (response.success) {
@@ -630,6 +630,10 @@
       // 测试数据源连接
       const testConnection = async (row: Datasource) => {
         const datasourceId = row.id;
+        if (!datasourceId) {
+          ElMessage.error('数据源 ID 不存在');
+          return;
+        }
         try {
           const response: ApiResponse = await datasourceService.testConnection(datasourceId);
           if (response.success) {
@@ -650,6 +654,10 @@
       // 移除Agent数据源
       const removeAgentDatasource = async (row: Datasource) => {
         const datasourceId = row.id;
+        if (!datasourceId) {
+          ElMessage.error('数据源 ID 不存在');
+          return;
+        }
 
         try {
           await ElMessageBox.confirm('是否要删除当前数据源吗？', '提示', {
@@ -663,7 +671,7 @@
 
         try {
           const response: ApiResponse = await agentDatasourceService.removeDatasourceFromAgent(
-            props.agentId,
+            String(props.agentId),
             datasourceId,
           );
           if (response.success) {
@@ -681,7 +689,7 @@
 
       const addDatasourceToAgent = async (datasourceId: number) => {
         try {
-          await agentDatasourceService.addDatasourceToAgent(props.agentId, datasourceId);
+          await agentDatasourceService.addDatasourceToAgent(String(props.agentId), datasourceId);
           await loadAgentDatasource();
           ElMessage.success('添加数据源成功');
           dialogVisible.value = false;

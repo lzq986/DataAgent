@@ -18,6 +18,8 @@ package com.alibaba.cloud.ai.service.knowledge;
 
 import com.alibaba.cloud.ai.constant.Constant;
 import com.alibaba.cloud.ai.constant.DocumentMetadataConstant;
+import com.alibaba.cloud.ai.dto.AgentKnowledgeQueryDTO;
+import com.alibaba.cloud.ai.dto.PageResult;
 import com.alibaba.cloud.ai.entity.AgentKnowledge;
 import com.alibaba.cloud.ai.mapper.AgentKnowledgeMapper;
 import com.alibaba.cloud.ai.service.vectorstore.AgentVectorStoreService;
@@ -171,6 +173,44 @@ public class AgentKnowledgeServiceImpl implements AgentKnowledgeService {
 					knowledgeId, e);
 			throw new RuntimeException("Failed to delete knowledge from vector store: " + e.getMessage(), e);
 		}
+	}
+
+	@Override
+	public PageResult<AgentKnowledge> queryByConditionsWithPage(AgentKnowledgeQueryDTO queryDTO) {
+		if (queryDTO.getAgentId() == null) {
+			throw new IllegalArgumentException("智能体ID不能为空");
+		}
+
+		if (queryDTO.getPageNum() == null || queryDTO.getPageNum() < 1) {
+			queryDTO.setPageNum(1);
+		}
+		if (queryDTO.getPageSize() == null || queryDTO.getPageSize() < 1) {
+			queryDTO.setPageSize(10);
+		}
+		if (queryDTO.getSortField() == null || queryDTO.getSortField().trim().isEmpty()) {
+			queryDTO.setSortField("create_time");
+		}
+		if (queryDTO.getSortOrder() == null || queryDTO.getSortOrder().trim().isEmpty()) {
+			queryDTO.setSortOrder("DESC");
+		}
+
+		int offset = (queryDTO.getPageNum() - 1) * queryDTO.getPageSize();
+
+		Long total = agentKnowledgeMapper.countByConditions(queryDTO.getAgentId(), queryDTO.getTitle(),
+				queryDTO.getType(), queryDTO.getSourceUrl(), queryDTO.getEmbeddingStatus());
+
+		List<AgentKnowledge> dataList = agentKnowledgeMapper.selectByConditionsWithPage(queryDTO.getAgentId(),
+				queryDTO.getTitle(), queryDTO.getType(), queryDTO.getSourceUrl(), queryDTO.getEmbeddingStatus(),
+				queryDTO.getSortField(), queryDTO.getSortOrder(), offset, queryDTO.getPageSize());
+
+		PageResult<AgentKnowledge> pageResult = new PageResult<>();
+		pageResult.setData(dataList);
+		pageResult.setTotal(total);
+		pageResult.setPageNum(queryDTO.getPageNum());
+		pageResult.setPageSize(queryDTO.getPageSize());
+		pageResult.calculateTotalPages();
+
+		return pageResult;
 	}
 
 }
