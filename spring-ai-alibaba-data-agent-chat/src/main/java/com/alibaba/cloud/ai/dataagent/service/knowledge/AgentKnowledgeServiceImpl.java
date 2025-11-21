@@ -18,6 +18,8 @@ package com.alibaba.cloud.ai.dataagent.service.knowledge;
 
 import com.alibaba.cloud.ai.dataagent.constant.Constant;
 import com.alibaba.cloud.ai.dataagent.constant.DocumentMetadataConstant;
+import com.alibaba.cloud.ai.dataagent.dto.AgentKnowledgeQueryDTO;
+import com.alibaba.cloud.ai.dataagent.dto.PageResult;
 import com.alibaba.cloud.ai.dataagent.entity.AgentKnowledge;
 import com.alibaba.cloud.ai.dataagent.enums.KnowledgeType;
 import com.alibaba.cloud.ai.dataagent.mapper.AgentKnowledgeMapper;
@@ -102,7 +104,7 @@ public class AgentKnowledgeServiceImpl implements AgentKnowledgeService {
 
 	@Override
 	public List<AgentKnowledge> getKnowledgeByStatus(Integer agentId, String status) {
-		return agentKnowledgeMapper.selectByAgentIdAndStatus(agentId, Integer.valueOf(status));
+		return agentKnowledgeMapper.selectByAgentIdAndStatus(agentId, status);
 	}
 
 	@Override
@@ -116,7 +118,7 @@ public class AgentKnowledgeServiceImpl implements AgentKnowledgeService {
 
 		int totalUpdated = 0;
 		for (Integer id : ids) {
-			totalUpdated += agentKnowledgeMapper.updateStatus(id, Integer.valueOf(status), now);
+			totalUpdated += agentKnowledgeMapper.updateStatus(id, status, now);
 		}
 		return totalUpdated == ids.size();
 	}
@@ -170,5 +172,43 @@ public class AgentKnowledgeServiceImpl implements AgentKnowledgeService {
 			throw new RuntimeException("Failed to delete knowledge from vector store: " + e.getMessage(), e);
 		}
 	}
+
+    @Override
+    public PageResult<AgentKnowledge> queryByConditionsWithPage(AgentKnowledgeQueryDTO queryDTO) {
+        if (queryDTO.getAgentId() == null) {
+            throw new IllegalArgumentException("智能体ID不能为空");
+        }
+
+        if (queryDTO.getPageNum() == null || queryDTO.getPageNum() < 1) {
+            queryDTO.setPageNum(1);
+        }
+        if (queryDTO.getPageSize() == null || queryDTO.getPageSize() < 1) {
+            queryDTO.setPageSize(10);
+        }
+        if (queryDTO.getSortField() == null || queryDTO.getSortField().trim().isEmpty()) {
+            queryDTO.setSortField("create_time");
+        }
+        if (queryDTO.getSortOrder() == null || queryDTO.getSortOrder().trim().isEmpty()) {
+            queryDTO.setSortOrder("DESC");
+        }
+
+        int offset = (queryDTO.getPageNum() - 1) * queryDTO.getPageSize();
+
+        Long total = agentKnowledgeMapper.countByConditions(queryDTO.getAgentId(), queryDTO.getTitle(),
+                queryDTO.getType(), queryDTO.getSourceUrl(), queryDTO.getEmbeddingStatus());
+
+        List<AgentKnowledge> dataList = agentKnowledgeMapper.selectByConditionsWithPage(queryDTO.getAgentId(),
+                queryDTO.getTitle(), queryDTO.getType(), queryDTO.getSourceUrl(), queryDTO.getEmbeddingStatus(),
+                queryDTO.getSortField(), queryDTO.getSortOrder(), offset, queryDTO.getPageSize());
+
+        PageResult<AgentKnowledge> pageResult = new PageResult<>();
+        pageResult.setData(dataList);
+        pageResult.setTotal(total);
+        pageResult.setPageNum(queryDTO.getPageNum());
+        pageResult.setPageSize(queryDTO.getPageSize());
+        pageResult.calculateTotalPages();
+
+        return pageResult;
+    }
 
 }

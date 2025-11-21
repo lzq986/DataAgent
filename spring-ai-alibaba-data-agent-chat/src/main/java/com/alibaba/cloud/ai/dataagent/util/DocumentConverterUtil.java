@@ -173,8 +173,8 @@ public class DocumentConverterUtil {
 			Document docWithMetadata = new Document(docId, doc.getText(), metadata);
 			documentsWithMetadata.add(docWithMetadata);
 		}
-
 		return documentsWithMetadata;
+
 	}
 
 	/**

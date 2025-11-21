@@ -16,6 +16,8 @@
 
 package com.alibaba.cloud.ai.dataagent.service.knowledge;
 
+import com.alibaba.cloud.ai.dataagent.dto.AgentKnowledgeQueryDTO;
+import com.alibaba.cloud.ai.dataagent.dto.PageResult;
 import com.alibaba.cloud.ai.dataagent.entity.AgentKnowledge;
 import com.alibaba.cloud.ai.dataagent.enums.KnowledgeType;
 
@@ -48,5 +50,7 @@ public interface AgentKnowledgeService {
 	void addKnowledgeToVectorStore(Long agentId, AgentKnowledge knowledge);
 
 	void deleteKnowledgeFromVectorStore(Long agentId, Integer knowledgeId);
+
+    PageResult<AgentKnowledge> queryByConditionsWithPage(AgentKnowledgeQueryDTO queryDTO);
 
 }

@@ -271,8 +271,15 @@ public class MappersTest {
 		k.setBusinessTerm("term_ut");
 		k.setDescription("desc_ut");
 		k.setSynonyms("a,b");
-		k.setIsRecall(1);
 		k.setAgentId(agentId);
+		try {
+			java.lang.reflect.Field field = BusinessKnowledge.class.getDeclaredField("isRecall");
+			field.setAccessible(true);
+			field.set(k, 1);
+		}
+		catch (Exception e) {
+			throw new RuntimeException(e);
+		}
 		int ins = businessKnowledgeMapper.insert(k);
 		Assertions.assertEquals(1, ins);
 		Assertions.assertNotNull(k.getId());
