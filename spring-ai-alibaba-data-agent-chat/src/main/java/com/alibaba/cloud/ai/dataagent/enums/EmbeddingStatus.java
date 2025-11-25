@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright 2024-2025 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,32 +13,28 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package com.alibaba.cloud.ai.dataagent.enums;
 
 import lombok.Getter;
 
-/**
- * 同步任务状态枚举
- */
 @Getter
-public enum TaskStatus {
+public enum EmbeddingStatus {
 
 	PENDING("PENDING"), PROCESSING("PROCESSING"), COMPLETED("COMPLETED"), FAILED("FAILED");
 
 	private final String value;
 
-	TaskStatus(String value) {
+	EmbeddingStatus(String value) {
 		this.value = value;
 	}
 
-	public static TaskStatus fromValue(String value) {
-		for (TaskStatus status : TaskStatus.values()) {
+	public static EmbeddingStatus fromValue(String value) {
+		for (EmbeddingStatus status : EmbeddingStatus.values()) {
 			if (status.value.equals(value)) {
 				return status;
 			}
 		}
-		throw new IllegalArgumentException("Unknown task status: " + value);
+		throw new IllegalArgumentException("Unknown embedding status: " + value);
 	}
 
 }

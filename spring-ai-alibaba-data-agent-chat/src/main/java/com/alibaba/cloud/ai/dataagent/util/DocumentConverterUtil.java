@@ -129,22 +129,13 @@ public class DocumentConverterUtil {
 		// 使用question作为Document的content字段
 		String content = knowledge.getQuestion();
 		Map<String, Object> metadata = new HashMap<>();
-
-		// 将answer存入metadata
-		metadata.put(DocumentMetadataConstant.ANSWER, knowledge.getContent());
+		// answer和isRecall经常变更的放到关系数据库
 		metadata.put(Constant.AGENT_ID, knowledge.getAgentId().toString());
-		metadata.put(DocumentMetadataConstant.IS_RECALL, knowledge.getIsRecall().toString());
 		metadata.put(DocumentMetadataConstant.VECTOR_TYPE, DocumentMetadataConstant.AGENT_KNOWLEDGE);
+		metadata.put(DocumentMetadataConstant.KNOWLEDGE_ID, knowledge.getId().toString());
+		metadata.put(DocumentMetadataConstant.KNOWLEDGE_TYPE, knowledge.getType().getCode());
 
-		// 生成唯一的文档ID
-		String docId = generateFixedQaFaqKnowledgeDocId(knowledge);
-
-		return new Document(docId, content, metadata);
-	}
-
-	public static String generateFixedQaFaqKnowledgeDocId(AgentKnowledge knowledge) {
-		return DocumentMetadataConstant.AGENT_KNOWLEDGE + ":" + knowledge.getType().getCode() + ":"
-				+ knowledge.getAgentId() + ":" + knowledge.getId();
+		return new Document(content, metadata);
 	}
 
 	/**
@@ -157,20 +148,16 @@ public class DocumentConverterUtil {
 		List<Document> documentsWithMetadata = new ArrayList<>();
 
 		for (Document doc : documents) {
+			// isRecall经常变更的放到关系数据库不放metadata中
 			// 创建元数据
-			Map<String, Object> metadata = new HashMap<>();
+			Map<String, Object> metadata = new HashMap<>(doc.getMetadata());
 			metadata.put(Constant.AGENT_ID, knowledge.getAgentId().toString());
 			metadata.put(DocumentMetadataConstant.KNOWLEDGE_ID, knowledge.getId().toString());
 			metadata.put(DocumentMetadataConstant.VECTOR_TYPE, DocumentMetadataConstant.AGENT_KNOWLEDGE);
-			metadata.put(DocumentMetadataConstant.IS_RECALL, knowledge.getIsRecall().toString());
-
-			// 生成唯一的文档ID，使用原始ID加上文档序号
-			String originalId = doc.getId();
-			String docId = DocumentMetadataConstant.AGENT_KNOWLEDGE + ":" + knowledge.getType().getCode() + ":"
-					+ knowledge.getAgentId() + ":" + knowledge.getId() + ":" + originalId;
+			metadata.put(DocumentMetadataConstant.KNOWLEDGE_TYPE, knowledge.getType().getCode());
 
 			// 创建带有元数据的新文档
-			Document docWithMetadata = new Document(docId, doc.getText(), metadata);
+			Document docWithMetadata = new Document(doc.getId(), doc.getText(), metadata);
 			documentsWithMetadata.add(docWithMetadata);
 		}
 		return documentsWithMetadata;

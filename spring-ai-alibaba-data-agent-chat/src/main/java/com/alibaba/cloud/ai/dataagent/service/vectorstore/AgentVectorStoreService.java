@@ -37,8 +37,6 @@ public interface AgentVectorStoreService {
 
 	Boolean deleteDocumentsByMetedata(String agentId, Map<String, Object> metadata) throws Exception;
 
-	void deleteDocumentsByIds(List<String> docIds);
-
 	/**
 	 * Get documents for specified agent
 	 */

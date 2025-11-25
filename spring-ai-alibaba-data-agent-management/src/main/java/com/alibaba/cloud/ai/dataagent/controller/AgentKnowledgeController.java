@@ -16,24 +16,22 @@
 
 package com.alibaba.cloud.ai.dataagent.controller;
 
-import com.alibaba.cloud.ai.dataagent.dto.AgentKnowledgeQueryDTO;
 import com.alibaba.cloud.ai.dataagent.dto.PageResult;
+import com.alibaba.cloud.ai.dataagent.dto.agentknowledge.AgentKnowledgeQueryDTO;
+import com.alibaba.cloud.ai.dataagent.dto.agentknowledge.CreateKnowledgeDto;
+import com.alibaba.cloud.ai.dataagent.dto.agentknowledge.UpdateKnowledgeDto;
 import com.alibaba.cloud.ai.dataagent.entity.AgentKnowledge;
-
-import com.alibaba.cloud.ai.dataagent.enums.KnowledgeType;
-
 import com.alibaba.cloud.ai.dataagent.service.file.FileStorageService;
 import com.alibaba.cloud.ai.dataagent.service.knowledge.AgentKnowledgeService;
+import com.alibaba.cloud.ai.dataagent.vo.ApiResponse;
+import com.alibaba.cloud.ai.dataagent.vo.PageResponse;
+import jakarta.validation.Valid;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.multipart.MultipartFile;
 
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 /**
  * Agent Knowledge Management Controller
@@ -43,495 +41,77 @@ import java.util.Map;
 @RequestMapping("/api/agent-knowledge")
 @CrossOrigin(origins = "*")
 @AllArgsConstructor
-// todo: 功能完成后需要与前端接入，部分返回值需要定义DTO
 public class AgentKnowledgeController {
-
-	// TODO 2025/11/19 规范返回结果为ApiResponse，外层不要ResponseEntity包装了
 
 	private final AgentKnowledgeService agentKnowledgeService;
 
 	private final FileStorageService fileStorageService;
 
 	/**
-	 * Query knowledge list by agent ID
-	 */
-	@GetMapping("/agent/{agentId}")
-	public ResponseEntity<Map<String, Object>> getKnowledgeByAgentId(@PathVariable(value = "agentId") Integer agentId,
-			@RequestParam(value = "type", required = false) String type,
-			@RequestParam(value = "status", required = false) String status,
-			@RequestParam(value = "keyword", required = false) String keyword) {
-
-		Map<String, Object> response = new HashMap<>();
-
-		try {
-			List<AgentKnowledge> knowledgeList;
-
-			if (keyword != null && !keyword.trim().isEmpty()) {
-				// Search knowledge
-				knowledgeList = agentKnowledgeService.searchKnowledge(agentId, keyword.trim());
-			}
-			else if (type != null && !type.trim().isEmpty()) {
-				// Filter by type - convert string to enum
-				try {
-					KnowledgeType knowledgeType = KnowledgeType.fromCode(type);
-					knowledgeList = agentKnowledgeService.getKnowledgeByType(agentId, knowledgeType);
-				}
-				catch (IllegalArgumentException e) {
-					response.put("success", false);
-					response.put("message", "无效的知识类型: " + type);
-					return ResponseEntity.badRequest().body(response);
-				}
-			}
-			else if (status != null && !status.trim().isEmpty()) {
-				// Filter by status
-				knowledgeList = agentKnowledgeService.getKnowledgeByStatus(agentId, status);
-			}
-			else {
-				// Query all knowledge
-				knowledgeList = agentKnowledgeService.getKnowledgeByAgentId(agentId);
-			}
-
-			response.put("success", true);
-			response.put("data", knowledgeList);
-			response.put("total", knowledgeList.size());
-			return ResponseEntity.ok(response);
-
-		}
-		catch (Exception e) {
-			response.put("success", false);
-			response.put("message", "查询知识列表失败：" + e.getMessage());
-			return ResponseEntity.badRequest().body(response);
-		}
-	}
-
-	/**
 	 * Query knowledge details by ID
 	 */
 	@GetMapping("/{id}")
-	public ResponseEntity<Map<String, Object>> getKnowledgeById(@PathVariable("id") Integer id) {
-		Map<String, Object> response = new HashMap<>();
-
+	public ApiResponse getKnowledgeById(@PathVariable("id") Integer id) {
 		try {
 			AgentKnowledge knowledge = agentKnowledgeService.getKnowledgeById(id);
 			if (knowledge != null) {
-				response.put("success", true);
-				response.put("data", knowledge);
-				return ResponseEntity.ok(response);
+				return ApiResponse.success("查询成功", knowledge);
 			}
 			else {
-				response.put("success", false);
-				response.put("message", "知识不存在");
-				return ResponseEntity.notFound().build();
+				return ApiResponse.error("知识不存在");
 			}
 		}
 		catch (Exception e) {
 			log.error("查询知识详情失败：{}", e.getMessage());
-			response.put("success", false);
-			response.put("message", "查询知识详情失败：" + e.getMessage());
-			return ResponseEntity.badRequest().body(response);
+			return ApiResponse.error("查询知识详情失败：" + e.getMessage());
 		}
 	}
 
 	/**
-	 * Create knowledge
+	 * Create knowledge without file (application/json)
 	 */
-	@PostMapping
-	public ResponseEntity<Map<String, Object>> createKnowledge(@RequestBody AgentKnowledge knowledge) {
-		Map<String, Object> response = new HashMap<>();
-
-		try {
-			// Validate required fields
-			if (knowledge.getAgentId() == null) {
-				response.put("success", false);
-				response.put("message", "智能体ID不能为空");
-				return ResponseEntity.badRequest().body(response);
-			}
-
-			if (knowledge.getTitle() == null || knowledge.getTitle().trim().isEmpty()) {
-				response.put("success", false);
-				response.put("message", "知识标题不能为空");
-				return ResponseEntity.badRequest().body(response);
-			}
-
-			// Set default values if not provided
-			if (knowledge.getStatus() == null || knowledge.getStatus().trim().isEmpty()) {
-				knowledge.setStatus("active");
-			}
-			if (knowledge.getEmbeddingStatus() == null || knowledge.getEmbeddingStatus().trim().isEmpty()) {
-				knowledge.setEmbeddingStatus("pending");
-			}
-			if (knowledge.getCreateTime() == null) {
-				knowledge.setCreateTime(java.time.LocalDateTime.now());
-			}
-			if (knowledge.getUpdateTime() == null) {
-				knowledge.setUpdateTime(java.time.LocalDateTime.now());
-			}
-
-			// Create knowledge in database
-			agentKnowledgeService.createKnowledge(knowledge);
-
-			// If knowledge content is not empty and status is active, add to vector store
-			if (knowledge.getContent() != null && !knowledge.getContent().trim().isEmpty()
-					&& "active".equals(knowledge.getStatus())) {
-				try {
-					knowledge.setEmbeddingStatus("processing");
-					agentKnowledgeService.updateKnowledge(knowledge.getId(), knowledge);
-
-					agentKnowledgeService.addKnowledgeToVectorStore(Long.valueOf(knowledge.getAgentId()), knowledge);
-
-					knowledge.setEmbeddingStatus("completed");
-					agentKnowledgeService.updateKnowledge(knowledge.getId(), knowledge);
-				}
-				catch (Exception vectorException) {
-					// Vector storage failed, update embedding status to failed
-					knowledge.setEmbeddingStatus("failed");
-					agentKnowledgeService.updateKnowledge(knowledge.getId(), knowledge);
-					// Log but don't affect main process
-					response.put("vectorWarning", "知识已保存，但向量化失败：" + vectorException.getMessage());
-				}
-			}
-
-			response.put("success", true);
-			response.put("data", knowledge);
-			response.put("message", "知识创建成功");
-			return ResponseEntity.ok(response);
-
-		}
-		catch (Exception e) {
-			log.error("创建知识失败：{}", e.getMessage());
-			response.put("success", false);
-			response.put("message", "创建知识失败：" + e.getMessage());
-			return ResponseEntity.badRequest().body(response);
-		}
-	}
-
-	@PostMapping(value = "/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-	public ResponseEntity<Map<String, Object>> uploadKnowledgeDocument(@RequestParam("file") MultipartFile file,
-			@RequestParam("agentId") Integer agentId, @RequestParam("title") String title,
-			@RequestParam(value = "category", required = false) String category,
-			@RequestParam(value = "tags", required = false) String tags,
-			@RequestParam(value = "status", required = false, defaultValue = "active") String status) {
-
-		Map<String, Object> response = new HashMap<>();
-
-		try {
-			if (agentId == null) {
-				response.put("success", false);
-				response.put("message", "智能体ID不能为空");
-				return ResponseEntity.badRequest().body(response);
-			}
-
-			if (title == null || title.trim().isEmpty()) {
-				response.put("success", false);
-				response.put("message", "知识标题不能为空");
-				return ResponseEntity.badRequest().body(response);
-			}
-
-			if (file.isEmpty()) {
-				response.put("success", false);
-				response.put("message", "上传文件不能为空");
-				return ResponseEntity.badRequest().body(response);
-			}
-
-			String contentType = file.getContentType();
-			String originalFilename = file.getOriginalFilename();
-			if (contentType == null || originalFilename == null) {
-				response.put("success", false);
-				response.put("message", "无法识别文件类型");
-				return ResponseEntity.badRequest().body(response);
-			}
-
-			boolean isValidType = contentType.startsWith("text/") || contentType.equals("application/pdf")
-					|| contentType.equals("application/msword")
-					|| contentType.equals("application/vnd.openxmlformats-officedocument.wordprocessingml.document")
-					|| contentType.equals("application/vnd.ms-excel")
-					|| contentType.equals("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
-
-			if (!isValidType) {
-				response.put("success", false);
-				response.put("message", "不支持的文件类型，仅支持文本、PDF、Word、Excel等文档格式");
-				return ResponseEntity.badRequest().body(response);
-			}
-
-			String filePath = fileStorageService.storeFile(file, "knowledge");
-			String fileUrl = fileStorageService.getFileUrl(filePath);
-
-			AgentKnowledge knowledge = new AgentKnowledge();
-			knowledge.setAgentId(agentId);
-			knowledge.setTitle(title);
-			knowledge.setType(KnowledgeType.DOCUMENT);
-			knowledge.setCategory(category);
-			knowledge.setStatus(status);
-			knowledge.setFilePath(filePath);
-			knowledge.setFileSize(file.getSize());
-			knowledge.setFileType(contentType);
-			knowledge.setEmbeddingStatus("pending");
-
-			boolean created = agentKnowledgeService.createKnowledge(knowledge);
-
-			if (created) {
-				response.put("success", true);
-				response.put("data", knowledge);
-				response.put("fileUrl", fileUrl);
-				response.put("message", "文档上传成功");
-				log.info("文档上传成功，知识ID: {}, 文件路径: {}", knowledge.getId(), filePath);
-				return ResponseEntity.ok(response);
-			}
-			else {
-				fileStorageService.deleteFile(filePath);
-				response.put("success", false);
-				response.put("message", "知识创建失败");
-				return ResponseEntity.badRequest().body(response);
-			}
-
-		}
-		catch (Exception e) {
-			log.error("上传文档失败：{}", e.getMessage(), e);
-			response.put("success", false);
-			response.put("message", "上传文档失败：" + e.getMessage());
-			return ResponseEntity.internalServerError().body(response);
-		}
+	@PostMapping("/create")
+	public ApiResponse createKnowledgeWithoutFile(@Valid CreateKnowledgeDto createKnowledgeDto) {
+		boolean success = agentKnowledgeService.createKnowledge(createKnowledgeDto);
+		return success ? ApiResponse.success("创建知识成功，后台向量存储开始更新，请耐心等待...") : ApiResponse.error("创建知识失败");
 	}
 
 	/**
 	 * Update knowledge
 	 */
 	@PutMapping("/{id}")
-	public ResponseEntity<Map<String, Object>> updateKnowledge(@PathVariable("id") Integer id,
-			@RequestBody AgentKnowledge knowledge) {
+	public ApiResponse updateKnowledge(@PathVariable("id") Integer id,
+			@RequestBody UpdateKnowledgeDto updateKnowledgeDto) {
 
-		Map<String, Object> response = new HashMap<>();
+		boolean success = agentKnowledgeService.updateKnowledge(id, updateKnowledgeDto);
+		return success ? ApiResponse.success("更新知识成功") : ApiResponse.error("更新知识失败");
+	}
 
-		try {
-			// First get original knowledge information
-			AgentKnowledge originalKnowledge = agentKnowledgeService.getKnowledgeById(id);
-			if (originalKnowledge == null) {
-				response.put("success", false);
-				response.put("message", "知识不存在");
-				return ResponseEntity.notFound().build();
-			}
-
-			// Validate title only if it's being updated
-			if (knowledge.getTitle() != null && knowledge.getTitle().trim().isEmpty()) {
-				response.put("success", false);
-				response.put("message", "知识标题不能为空");
-				return ResponseEntity.badRequest().body(response);
-			}
-
-			// Update knowledge in database
-			boolean st = agentKnowledgeService.updateKnowledge(id, knowledge);
-			if (st) {
-				// Handle vector storage update
-				AgentKnowledge updatedKnowledge = agentKnowledgeService.getKnowledgeById(id);
-				try {
-					Long agentId = Long.valueOf(updatedKnowledge.getAgentId());
-
-					// If content changes or status becomes active, need to re-vectorize
-					boolean contentChanged = !java.util.Objects.equals(originalKnowledge.getContent(),
-							updatedKnowledge.getContent());
-					boolean statusChangedToActive = !"active".equals(originalKnowledge.getStatus())
-							&& "active".equals(updatedKnowledge.getStatus());
-					boolean statusChangedFromActive = "active".equals(originalKnowledge.getStatus())
-							&& !"active".equals(updatedKnowledge.getStatus());
-
-					if (statusChangedFromActive) {
-						// Status changes from active to other, delete vector data
-						agentKnowledgeService.deleteKnowledgeFromVectorStore(agentId, id);
-						updatedKnowledge.setEmbeddingStatus("pending");
-						agentKnowledgeService.updateKnowledge(id, updatedKnowledge);
-					}
-					else if ((contentChanged || statusChangedToActive) && "active".equals(updatedKnowledge.getStatus())
-							&& updatedKnowledge.getContent() != null
-							&& !updatedKnowledge.getContent().trim().isEmpty()) {
-						// Content changes or status becomes active, re-vectorize
-						updatedKnowledge.setEmbeddingStatus("processing");
-						agentKnowledgeService.updateKnowledge(id, updatedKnowledge);
-
-						agentKnowledgeService.deleteKnowledgeFromVectorStore(agentId, id); // First
-																							// delete
-																							// old
-						agentKnowledgeService.addKnowledgeToVectorStore(agentId, updatedKnowledge); // Then
-																									// add
-																									// new
-
-						updatedKnowledge.setEmbeddingStatus("completed");
-						agentKnowledgeService.updateKnowledge(id, updatedKnowledge);
-					}
-				}
-				catch (Exception vectorException) {
-					// Vector storage operation failed, update embedding status to failed
-					updatedKnowledge.setEmbeddingStatus("failed");
-					agentKnowledgeService.updateKnowledge(id, updatedKnowledge);
-					response.put("vectorWarning", "知识已更新，但向量化失败：" + vectorException.getMessage());
-				}
-
-				response.put("success", true);
-				response.put("data", updatedKnowledge);
-				response.put("message", "知识更新成功");
-				return ResponseEntity.ok(response);
-			}
-			else {
-				response.put("success", false);
-				response.put("message", "知识更新失败");
-				return ResponseEntity.badRequest().body(response);
-			}
-		}
-		catch (Exception e) {
-			log.error("更新知识失败：{}", e.getMessage());
-			response.put("success", false);
-			response.put("message", "更新知识失败：" + e.getMessage());
-			return ResponseEntity.badRequest().body(response);
-		}
+	@PutMapping("/knowledge/{id}/recall-status/{recalled}")
+	public ResponseEntity<Boolean> updateRecallStatus(@PathVariable Integer id, @PathVariable Integer recalled) {
+		boolean result = agentKnowledgeService.updateKnowledgeRecallStatus(id, recalled);
+		return ResponseEntity.ok(result);
 	}
 
 	/**
 	 * Delete knowledge
 	 */
 	@DeleteMapping("/{id}")
-	public ResponseEntity<Map<String, Object>> deleteKnowledge(@PathVariable("id") Integer id) {
-		Map<String, Object> response = new HashMap<>();
-
-		try {
-			// First get knowledge information, used to delete vector data
-			AgentKnowledge knowledge = agentKnowledgeService.getKnowledgeById(id);
-			if (knowledge == null) {
-				response.put("success", false);
-				response.put("message", "知识不存在");
-				return ResponseEntity.notFound().build();
-			}
-
-			// Delete knowledge in database
-			boolean deleted = agentKnowledgeService.deleteKnowledge(id);
-			if (deleted) {
-				// Also delete vector data
-				try {
-					Long agentId = Long.valueOf(knowledge.getAgentId());
-					agentKnowledgeService.deleteKnowledgeFromVectorStore(agentId, id);
-				}
-				catch (Exception vectorException) {
-					// Vector deletion failed, log warning but don't affect main process
-					response.put("vectorWarning", "知识已删除，但向量数据删除失败：" + vectorException.getMessage());
-				}
-
-				response.put("success", true);
-				response.put("message", "知识删除成功");
-				return ResponseEntity.ok(response);
-			}
-			else {
-				response.put("success", false);
-				response.put("message", "知识删除失败");
-				return ResponseEntity.badRequest().body(response);
-			}
-		}
-		catch (Exception e) {
-			response.put("success", false);
-			response.put("message", "删除知识失败：" + e.getMessage());
-			return ResponseEntity.badRequest().body(response);
-		}
-	}
-
-	/**
-	 * Batch update knowledge status
-	 */
-	@PutMapping("/batch/status")
-	public ResponseEntity<Map<String, Object>> batchUpdateStatus(@RequestBody Map<String, Object> request) {
-
-		Map<String, Object> response = new HashMap<>();
-
-		try {
-			@SuppressWarnings("unchecked")
-			List<Integer> ids = (List<Integer>) request.get("ids");
-			String status = (String) request.get("status");
-
-			if (ids == null || ids.isEmpty()) {
-				response.put("success", false);
-				response.put("message", "ID列表不能为空");
-				return ResponseEntity.badRequest().body(response);
-			}
-
-			if (status == null || status.trim().isEmpty()) {
-				response.put("success", false);
-				response.put("message", "状态不能为空");
-				return ResponseEntity.badRequest().body(response);
-			}
-
-			boolean st = agentKnowledgeService.batchUpdateStatus(ids, status);
-			response.put("success", st);
-			response.put("message", "批量更新成功");
-			response.put("updatedCount", ids.size());
-			return ResponseEntity.ok(response);
-
-		}
-		catch (Exception e) {
-			log.error("批量更新知识失败：{}", e.getMessage());
-			response.put("success", false);
-			response.put("message", "批量更新失败：" + e.getMessage());
-			return ResponseEntity.badRequest().body(response);
-		}
-	}
-
-	/**
-	 * Get agent knowledge statistics
-	 */
-	@GetMapping("/statistics/{agentId}")
-	public ResponseEntity<Map<String, Object>> getKnowledgeStatistics(@PathVariable("agentId") Integer agentId) {
-		Map<String, Object> response = new HashMap<>();
-
-		try {
-			int totalCount = agentKnowledgeService.countKnowledgeByAgent(agentId);
-			List<Object[]> typeStatistics = agentKnowledgeService.countKnowledgeByType(agentId);
-
-			Map<String, Object> statistics = new HashMap<>();
-			statistics.put("totalCount", totalCount);
-			statistics.put("typeStatistics", typeStatistics);
-
-			response.put("success", true);
-			response.put("data", statistics);
-			return ResponseEntity.ok(response);
-
-		}
-		catch (Exception e) {
-			log.error("获取统计信息失败：{}", e.getMessage());
-			response.put("success", false);
-			response.put("message", "获取统计信息失败：" + e.getMessage());
-			return ResponseEntity.badRequest().body(response);
-		}
+	public ApiResponse deleteKnowledge(@PathVariable("id") Integer id) {
+		return agentKnowledgeService.deleteKnowledge(id) ? ApiResponse.success("删除操作已接收，等待后台删除相关资源...")
+				: ApiResponse.error("删除失败");
 	}
 
 	@PostMapping("/query/page")
-	public ResponseEntity<Map<String, Object>> queryByPage(@RequestBody AgentKnowledgeQueryDTO queryDTO) {
-		Map<String, Object> response = new HashMap<>();
-
+	public PageResponse<List<AgentKnowledge>> queryByPage(@Valid @RequestBody AgentKnowledgeQueryDTO queryDTO) {
 		try {
-			if (queryDTO.getAgentId() == null) {
-				response.put("success", false);
-				response.put("message", "智能体ID不能为空");
-				return ResponseEntity.badRequest().body(response);
-			}
-
 			PageResult<AgentKnowledge> pageResult = agentKnowledgeService.queryByConditionsWithPage(queryDTO);
-
-			response.put("success", true);
-			response.put("data", pageResult.getData());
-			response.put("total", pageResult.getTotal());
-			response.put("pageNum", pageResult.getPageNum());
-			response.put("pageSize", pageResult.getPageSize());
-			response.put("totalPages", pageResult.getTotalPages());
-
-			return ResponseEntity.ok(response);
-
-		}
-		catch (IllegalArgumentException e) {
-			log.error("参数校验失败：{}", e.getMessage());
-			response.put("success", false);
-			response.put("message", e.getMessage());
-			return ResponseEntity.badRequest().body(response);
+			return PageResponse.success(pageResult.getData(), pageResult.getTotal(), pageResult.getPageNum(),
+					pageResult.getPageSize(), pageResult.getTotalPages());
 		}
 		catch (Exception e) {
 			log.error("分页查询知识列表失败：{}", e.getMessage());
-			response.put("success", false);
-			response.put("message", "分页查询失败：" + e.getMessage());
-			return ResponseEntity.badRequest().body(response);
+			return PageResponse.pageError("分页查询失败：" + e.getMessage());
 		}
 	}
 

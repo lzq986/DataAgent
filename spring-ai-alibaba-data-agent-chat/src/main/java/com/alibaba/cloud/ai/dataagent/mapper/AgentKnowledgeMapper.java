@@ -16,14 +16,9 @@
 
 package com.alibaba.cloud.ai.dataagent.mapper;
 
+import com.alibaba.cloud.ai.dataagent.dto.agentknowledge.AgentKnowledgeQueryDTO;
 import com.alibaba.cloud.ai.dataagent.entity.AgentKnowledge;
-import com.alibaba.cloud.ai.dataagent.enums.KnowledgeType;
-import org.apache.ibatis.annotations.Insert;
-import org.apache.ibatis.annotations.Mapper;
-import org.apache.ibatis.annotations.Options;
-import org.apache.ibatis.annotations.Param;
-import org.apache.ibatis.annotations.Select;
-import org.apache.ibatis.annotations.Update;
+import org.apache.ibatis.annotations.*;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -32,21 +27,14 @@ import java.util.List;
 public interface AgentKnowledgeMapper {
 
 	@Select("""
-
-			SELECT * FROM agent_knowledge WHERE agent_id = #{agentId} AND is_deleted = 0 ORDER BY created_time DESC
-
-			""")
-	List<AgentKnowledge> selectByAgentId(@Param("agentId") Integer agentId);
-
-	@Select("""
 			SELECT * FROM agent_knowledge WHERE id = #{id} AND is_deleted = 0
 			""")
 	AgentKnowledge selectById(@Param("id") Integer id);
 
 	@Insert("""
 
-			INSERT INTO agent_knowledge (agent_id, title, content, type, question, status, source_filename, file_path, file_size, created_time, updated_time)
-			VALUES (#{agentId}, #{title}, #{content}, #{type.code}, #{question}, #{status}, #{sourceFilename}, #{filePath}, #{fileSize}, #{createdTime}, #{updatedTime})
+			INSERT INTO agent_knowledge (agent_id, title, content, type, question, is_recall, embedding_status, source_filename, file_path, file_size, file_type, is_deleted, is_resource_cleaned, created_time, updated_time)
+			VALUES (#{agentId}, #{title}, #{content}, #{type.code}, #{question}, #{isRecall}, #{embeddingStatus.value}, #{sourceFilename}, #{filePath}, #{fileSize}, #{fileType}, #{isDeleted}, #{isResourceCleaned}, #{createdTime}, #{updatedTime})
 
 			""")
 	@Options(useGeneratedKeys = true, keyProperty = "id", keyColumn = "id")
@@ -58,16 +46,17 @@ public interface AgentKnowledgeMapper {
 			<set>
 				<if test="title != null">title = #{title},</if>
 				<if test="content != null">content = #{content},</if>
-				<if test="type != null">type = #{type},</if>
-				<if test="category != null">category = #{category},</if>
-				<if test="tags != null">tags = #{tags},</if>
-				<if test="status != null">status = #{status},</if>
-				<if test="sourceUrl != null">source_url = #{sourceUrl},</if>
+				<if test="type != null">type = #{type.code},</if>
+				<if test="question != null">question = #{question},</if>
+				<if test="isRecall != null">is_recall = #{isRecall},</if>
+				<if test="embeddingStatus != null">embedding_status = #{embeddingStatus.value},</if>
+				<if test="sourceFilename != null">source_filename = #{sourceFilename},</if>
 				<if test="filePath != null">file_path = #{filePath},</if>
 				<if test="fileSize != null">file_size = #{fileSize},</if>
 				<if test="fileType != null">file_type = #{fileType},</if>
-				<if test="embeddingStatus != null">embedding_status = #{embeddingStatus},</if>
-				update_time = NOW()
+				<if test="isDeleted != null">is_deleted = #{isDeleted},</if>
+				<if test="isResourceCleaned != null">is_resource_cleaned = #{isResourceCleaned},</if>
+				updated_time = NOW()
 			</set>
 			WHERE id = #{id} AND is_deleted = 0
 			</script>
@@ -75,93 +64,45 @@ public interface AgentKnowledgeMapper {
 	int update(AgentKnowledge knowledge);
 
 	@Update("""
-			UPDATE agent_knowledge SET is_deleted = 1, updated_time = NOW() WHERE id = #{id}
+			UPDATE agent_knowledge SET embedding_status = #{embeddingStatus}, error_msg = #{errorMsg}, updated_time = #{now} WHERE id = #{id} AND is_deleted = 0
 			""")
-	int deleteById(@Param("id") Integer id);
-
-	@Select("""
-			SELECT * FROM agent_knowledge WHERE agent_id = #{agentId} AND type = #{type.code} AND is_deleted = 0 ORDER BY created_time DESC
-
-			""")
-	List<AgentKnowledge> selectByAgentIdAndType(@Param("agentId") Integer agentId, @Param("type") KnowledgeType type);
-
-	@Select("""
-
-			SELECT * FROM agent_knowledge WHERE agent_id = #{agentId} AND status = #{status} AND is_deleted = 0 ORDER BY created_time DESC
-
-			""")
-	List<AgentKnowledge> selectByAgentIdAndStatus(@Param("agentId") Integer agentId, @Param("status") String status);
-
-	@Select("""
-
-			SELECT * FROM agent_knowledge WHERE agent_id = #{agentId} AND is_deleted = 0 AND
-			(title LIKE CONCAT('%', #{keyword}, '%') OR content LIKE CONCAT('%', #{keyword}, '%') OR question LIKE CONCAT('%', #{keyword}, '%'))
-			ORDER BY created_time DESC
-
-			""")
-	List<AgentKnowledge> searchByAgentIdAndKeyword(@Param("agentId") Integer agentId, @Param("keyword") String keyword);
-
-	@Update("""
-
-			UPDATE agent_knowledge SET status = #{status}, updated_time = #{now} WHERE id = #{id} AND is_deleted = 0
-
-			""")
-	int updateStatus(@Param("id") Integer id, @Param("status") String status, @Param("now") LocalDateTime now);
-
-	@Select("""
-			SELECT COUNT(*) FROM agent_knowledge WHERE agent_id = #{agentId} AND is_deleted = 0
-			""")
-	int countByAgentId(@Param("agentId") Integer agentId);
-
-	@Select("""
-			SELECT type, COUNT(*) as count FROM agent_knowledge WHERE agent_id = #{agentId} AND is_deleted = 0 GROUP BY type
-			""")
-	List<Object[]> countByType(@Param("agentId") Integer agentId);
+	int updateEmbeddingStatus(@Param("id") Integer id, @Param("embeddingStatus") String embeddingStatus,
+			@Param("errorMsg") String errorMsg, @Param("now") LocalDateTime now);
 
 	@Select("""
 			<script>
 			SELECT * FROM agent_knowledge
-			WHERE agent_id = #{agentId}
-			<if test="title != null and title != ''">
-				AND title LIKE CONCAT('%', #{title}, '%')
+			WHERE agent_id = #{queryDTO.agentId}
+			<if test="queryDTO.title != null and queryDTO.title != ''">
+				AND title LIKE CONCAT('%', #{queryDTO.title}, '%')
 			</if>
-			<if test="type != null and type != ''">
-				AND type = #{type}
+			<if test="queryDTO.type != null and queryDTO.type != ''">
+				AND type = #{queryDTO.type}
 			</if>
-			<if test="sourceUrl != null and sourceUrl != ''">
-				AND source_url LIKE CONCAT('%', #{sourceUrl}, '%')
+			<if test="queryDTO.embeddingStatus != null and queryDTO.embeddingStatus != ''">
+				AND embedding_status = #{queryDTO.embeddingStatus}
 			</if>
-			<if test="embeddingStatus != null and embeddingStatus != ''">
-				AND embedding_status = #{embeddingStatus}
-			</if>
-			ORDER BY ${sortField} ${sortOrder}
-			LIMIT #{offset}, #{pageSize}
+			LIMIT #{offset}, #{queryDTO.pageSize}
 			</script>
 			""")
-	List<AgentKnowledge> selectByConditionsWithPage(@Param("agentId") Integer agentId, @Param("title") String title,
-			@Param("type") String type, @Param("sourceUrl") String sourceUrl,
-			@Param("embeddingStatus") String embeddingStatus, @Param("sortField") String sortField,
-			@Param("sortOrder") String sortOrder, @Param("offset") Integer offset, @Param("pageSize") Integer pageSize);
+	List<AgentKnowledge> selectByConditionsWithPage(@Param("queryDTO") AgentKnowledgeQueryDTO queryDTO,
+			@Param("offset") Integer offset);
 
 	@Select("""
 			<script>
 			SELECT COUNT(*) FROM agent_knowledge
-			WHERE agent_id = #{agentId}
-			<if test="title != null and title != ''">
-				AND title LIKE CONCAT('%', #{title}, '%')
+			WHERE agent_id = #{queryDTO.agentId}
+			<if test="queryDTO.title != null and queryDTO.title != ''">
+				AND title LIKE CONCAT('%', #{queryDTO.title}, '%')
 			</if>
-			<if test="type != null and type != ''">
-				AND type = #{type}
+			<if test="queryDTO.type != null and queryDTO.type != ''">
+				AND type = #{queryDTO.type}
 			</if>
-			<if test="sourceUrl != null and sourceUrl != ''">
-				AND source_url LIKE CONCAT('%', #{sourceUrl}, '%')
-			</if>
-			<if test="embeddingStatus != null and embeddingStatus != ''">
-				AND embedding_status = #{embeddingStatus}
+			<if test="queryDTO.embeddingStatus != null and queryDTO.embeddingStatus != ''">
+				AND embedding_status = #{queryDTO.embeddingStatus}
 			</if>
 			</script>
 			""")
-	Long countByConditions(@Param("agentId") Integer agentId, @Param("title") String title, @Param("type") String type,
-			@Param("sourceUrl") String sourceUrl, @Param("embeddingStatus") String embeddingStatus);
+	Long countByConditions(@Param("queryDTO") AgentKnowledgeQueryDTO queryDTO);
 
 }

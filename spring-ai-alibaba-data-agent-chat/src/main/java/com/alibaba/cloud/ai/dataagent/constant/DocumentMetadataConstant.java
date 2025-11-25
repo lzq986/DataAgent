@@ -34,6 +34,9 @@ public final class DocumentMetadataConstant {
 	// knowledgeId
 	public static final String KNOWLEDGE_ID = "knowledgeId";
 
+	// knowledge Type
+	public static final String KNOWLEDGE_TYPE = "knowledgeType";
+
 	// businessTerm
 	public static final String BUSINESS_TERM = "businessTerm";
 

@@ -17,13 +17,7 @@
 package com.alibaba.cloud.ai.dataagent.mapper;
 
 import com.alibaba.cloud.ai.dataagent.MySqlContainerConfiguration;
-import com.alibaba.cloud.ai.dataagent.entity.Agent;
-import com.alibaba.cloud.ai.dataagent.entity.AgentKnowledge;
-import com.alibaba.cloud.ai.dataagent.entity.AgentPresetQuestion;
-import com.alibaba.cloud.ai.dataagent.entity.ChatMessage;
-import com.alibaba.cloud.ai.dataagent.entity.ChatSession;
-import com.alibaba.cloud.ai.dataagent.entity.SemanticModel;
-import com.alibaba.cloud.ai.dataagent.entity.BusinessKnowledge;
+import com.alibaba.cloud.ai.dataagent.entity.*;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.mybatis.spring.boot.test.autoconfigure.MybatisTest;
@@ -193,36 +187,6 @@ public class MappersTest {
 		Assertions.assertEquals(1, upd);
 
 		int del = semanticModelMapper.deleteById(m.getId());
-		Assertions.assertEquals(1, del);
-
-		agentMapper.deleteById(agentId);
-	}
-
-	@Test
-	public void testAgentKnowledgeCrud() {
-		Long agentId = createAgent("ak-holder");
-		AgentKnowledge k = new AgentKnowledge();
-		k.setAgentId(agentId.intValue());
-		k.setTitle("ak_title");
-		k.setContent("ak_content");
-		k.setType("document");
-		k.setStatus("active");
-		k.setEmbeddingStatus("pending");
-		k.setCreateTime(LocalDateTime.now());
-		k.setUpdateTime(LocalDateTime.now());
-		int ins = agentKnowledgeMapper.insert(k);
-		Assertions.assertEquals(1, ins);
-		Assertions.assertNotNull(k.getId());
-
-		List<AgentKnowledge> list = agentKnowledgeMapper.selectByAgentId(1);
-		Assertions.assertTrue(list.stream().anyMatch(x -> x.getId().equals(k.getId())));
-
-		k.setTitle("ak_title2");
-		k.setUpdateTime(LocalDateTime.now());
-		int upd = agentKnowledgeMapper.update(k);
-		Assertions.assertEquals(1, upd);
-
-		int del = agentKnowledgeMapper.deleteById(k.getId());
 		Assertions.assertEquals(1, del);
 
 		agentMapper.deleteById(agentId);

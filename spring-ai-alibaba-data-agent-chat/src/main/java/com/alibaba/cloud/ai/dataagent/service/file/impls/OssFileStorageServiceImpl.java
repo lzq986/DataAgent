@@ -22,6 +22,7 @@ import com.aliyun.oss.OSS;
 import com.aliyun.oss.OSSClientBuilder;
 import com.aliyun.oss.model.ObjectMetadata;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.core.io.Resource;
 import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -140,6 +141,13 @@ public class OssFileStorageServiceImpl implements FileStorageService {
 			log.error("生成OSS文件URL失败: {}", filePath, e);
 			return filePath;
 		}
+	}
+
+	@Override
+	public Resource getFileResource(String filePath) {
+		// TODO 实现
+		log.error("Getting resource from oss not implement");
+		return null;
 	}
 
 	/**

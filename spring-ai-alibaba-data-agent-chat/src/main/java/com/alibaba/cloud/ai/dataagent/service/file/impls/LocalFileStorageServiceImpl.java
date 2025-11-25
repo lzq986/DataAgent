@@ -17,15 +17,17 @@ package com.alibaba.cloud.ai.dataagent.service.file.impls;
 
 import com.alibaba.cloud.ai.dataagent.config.file.FileStorageProperties;
 import com.alibaba.cloud.ai.dataagent.service.file.FileStorageService;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.core.io.FileSystemResource;
+import org.springframework.core.io.Resource;
 import org.springframework.util.StringUtils;
-import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
+import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
-import jakarta.servlet.http.HttpServletRequest;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -105,6 +107,17 @@ public class LocalFileStorageServiceImpl implements FileStorageService {
 			log.warn("动态构建URL失败，使用相对路径", e);
 		}
 		return fileStorageProperties.getUrlPrefix() + "/" + filePath;
+	}
+
+	@Override
+	public Resource getFileResource(String filePath) {
+		Path fullPath = Paths.get(fileStorageProperties.getPath(), filePath);
+		if (Files.exists(fullPath)) {
+			return new FileSystemResource(fullPath);
+		}
+		else {
+			throw new RuntimeException("File is not exist: " + filePath);
+		}
 	}
 
 	/**
