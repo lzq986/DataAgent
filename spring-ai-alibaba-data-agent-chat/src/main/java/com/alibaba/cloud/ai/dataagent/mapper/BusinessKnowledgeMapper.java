@@ -105,4 +105,10 @@ public interface BusinessKnowledgeMapper {
 			""")
 	BusinessKnowledge selectById(Long id);
 
+	@Select("""
+			SELECT id FROM business_knowledge
+			WHERE agent_id = #{agentId} AND is_recall = 1
+			""")
+	List<Long> selectRecalledKnowledgeIds(@Param("agentId") Long agentId);
+
 }

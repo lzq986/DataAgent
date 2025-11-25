@@ -32,21 +32,21 @@ public final class DocumentMetadataConstant {
 	public static final String VECTOR_TYPE = "vectorType";
 
 	// knowledgeId
-	public static final String KNOWLEDGE_ID = "knowledgeId";
+	public static final String AGENT_KNOWLEDGE_ID = "agentKnowledgeId";
 
-	// knowledge Type
-	public static final String KNOWLEDGE_TYPE = "knowledgeType";
-
-	// businessTerm
-	public static final String BUSINESS_TERM = "businessTerm";
+	// FAQ/DOCUMENT/QA
+	public static final String CONCRETE_AGENT_KNOWLEDGE_TYPE = "concreteAgentKnowledgeType";
 
 	// 智能体的知识
 	public static final String AGENT_KNOWLEDGE = "agentKnowledge";
 
+	// businessTerm
+	public static final String BUSINESS_TERM = "businessTerm";
+
+	// businessTermId
+	public static final String BUSINESS_TERM_ID = "businessTermId";
+
 	// isRecall
 	public static final String IS_RECALL = "isRecall";
-
-	// answer
-	public static final String ANSWER = "answer";
 
 }

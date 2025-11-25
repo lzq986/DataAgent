@@ -132,8 +132,8 @@ public class DocumentConverterUtil {
 		// answer和isRecall经常变更的放到关系数据库
 		metadata.put(Constant.AGENT_ID, knowledge.getAgentId().toString());
 		metadata.put(DocumentMetadataConstant.VECTOR_TYPE, DocumentMetadataConstant.AGENT_KNOWLEDGE);
-		metadata.put(DocumentMetadataConstant.KNOWLEDGE_ID, knowledge.getId().toString());
-		metadata.put(DocumentMetadataConstant.KNOWLEDGE_TYPE, knowledge.getType().getCode());
+		metadata.put(DocumentMetadataConstant.AGENT_KNOWLEDGE_ID, knowledge.getId().toString());
+		metadata.put(DocumentMetadataConstant.CONCRETE_AGENT_KNOWLEDGE_TYPE, knowledge.getType().getCode());
 
 		return new Document(content, metadata);
 	}
@@ -152,9 +152,9 @@ public class DocumentConverterUtil {
 			// 创建元数据
 			Map<String, Object> metadata = new HashMap<>(doc.getMetadata());
 			metadata.put(Constant.AGENT_ID, knowledge.getAgentId().toString());
-			metadata.put(DocumentMetadataConstant.KNOWLEDGE_ID, knowledge.getId().toString());
+			metadata.put(DocumentMetadataConstant.AGENT_KNOWLEDGE_ID, knowledge.getId().toString());
 			metadata.put(DocumentMetadataConstant.VECTOR_TYPE, DocumentMetadataConstant.AGENT_KNOWLEDGE);
-			metadata.put(DocumentMetadataConstant.KNOWLEDGE_TYPE, knowledge.getType().getCode());
+			metadata.put(DocumentMetadataConstant.CONCRETE_AGENT_KNOWLEDGE_TYPE, knowledge.getType().getCode());
 
 			// 创建带有元数据的新文档
 			Document docWithMetadata = new Document(doc.getId(), doc.getText(), metadata);

@@ -105,4 +105,9 @@ public interface AgentKnowledgeMapper {
 			""")
 	Long countByConditions(@Param("queryDTO") AgentKnowledgeQueryDTO queryDTO);
 
+	@Select("""
+			SELECT id FROM agent_knowledge WHERE agent_id = #{agentId} AND is_recall = 1 AND is_deleted = 0
+			""")
+	List<Integer> selectRecalledKnowledgeIds(@Param("agentId") Integer agentId);
+
 }

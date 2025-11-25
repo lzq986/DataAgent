@@ -16,9 +16,9 @@
 
 package com.alibaba.cloud.ai.dataagent.service.knowledge;
 
+import com.alibaba.cloud.ai.dataagent.dto.PageResult;
 import com.alibaba.cloud.ai.dataagent.dto.agentknowledge.AgentKnowledgeQueryDTO;
 import com.alibaba.cloud.ai.dataagent.dto.agentknowledge.CreateKnowledgeDto;
-import com.alibaba.cloud.ai.dataagent.dto.PageResult;
 import com.alibaba.cloud.ai.dataagent.dto.agentknowledge.UpdateKnowledgeDto;
 import com.alibaba.cloud.ai.dataagent.entity.AgentKnowledge;
 

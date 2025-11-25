@@ -15,63 +15,13 @@
  */
 package com.alibaba.cloud.ai.dataagent.util;
 
-import com.alibaba.cloud.ai.dataagent.constant.Constant;
 import com.alibaba.cloud.ai.dataagent.constant.DocumentMetadataConstant;
-import com.alibaba.cloud.ai.dataagent.common.request.AgentSearchRequest;
-import org.springframework.ai.vectorstore.SearchRequest;
-import org.springframework.ai.vectorstore.filter.Filter;
-import org.springframework.ai.vectorstore.filter.FilterExpressionBuilder;
-import org.springframework.util.StringUtils;
 
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
 public class SearchUtil {
-
-	/**
-	 * 构建向量搜索请求（普通搜索）
-	 * @param request 搜索请求参数
-	 * @return 构建的搜索请求
-	 */
-	public static SearchRequest buildVectorSearchRequest(AgentSearchRequest request) {
-		return buildVectorSearchRequest(request, false);
-	}
-
-	/**
-	 * 构建向量搜索请求
-	 * @param request 搜索请求参数
-	 * @param isHybridSearch 是否为混合搜索（需要RRF融合）
-	 * @return 构建的搜索请求
-	 */
-	public static SearchRequest buildVectorSearchRequest(AgentSearchRequest request, boolean isHybridSearch) {
-		SearchRequest.Builder builder = SearchRequest.builder();
-		if (StringUtils.hasText(request.getQuery()))
-			builder.query(request.getQuery());
-
-		// 如果是混合搜索，提高topK为 RRF 等融合策略提供更丰富的候选集
-		if (request.getTopK() != null) {
-			if (isHybridSearch) {
-				builder.topK(request.getTopK() * 2);
-			}
-			else {
-				builder.topK(request.getTopK());
-			}
-		}
-		else {
-			builder.topK(isHybridSearch ? 40 : 20);
-		}
-
-		builder.filterExpression(buildFilter(request.getAgentId(), request.getDocVectorType()));
-		builder.similarityThreshold(request.getSimilarityThreshold());
-		return builder.build();
-	}
-
-	public static Filter.Expression buildFilter(String agentId, String docVectorType) {
-		FilterExpressionBuilder b = new FilterExpressionBuilder();
-		return b.and(b.eq(DocumentMetadataConstant.VECTOR_TYPE, docVectorType), b.eq(Constant.AGENT_ID, agentId))
-			.build();
-	}
 
 	/**
 	 * 构建过滤表达式字符串，目前FilterExpressionBuilder 不支持链式拼接元数据过滤，所以只能使用字符串拼接

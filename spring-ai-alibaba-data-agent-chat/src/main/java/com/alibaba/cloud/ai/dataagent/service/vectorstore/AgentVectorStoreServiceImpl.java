@@ -15,17 +15,18 @@
  */
 package com.alibaba.cloud.ai.dataagent.service.vectorstore;
 
-import com.alibaba.cloud.ai.dataagent.config.DataAgentProperties;
 import com.alibaba.cloud.ai.dataagent.common.connector.accessor.Accessor;
 import com.alibaba.cloud.ai.dataagent.common.connector.accessor.AccessorFactory;
 import com.alibaba.cloud.ai.dataagent.common.connector.bo.DbQueryParameter;
 import com.alibaba.cloud.ai.dataagent.common.connector.bo.ForeignKeyInfoBO;
 import com.alibaba.cloud.ai.dataagent.common.connector.bo.TableInfoBO;
 import com.alibaba.cloud.ai.dataagent.common.connector.config.DbConfig;
+import com.alibaba.cloud.ai.dataagent.common.request.AgentSearchRequest;
+import com.alibaba.cloud.ai.dataagent.common.request.HybridSearchRequest;
+import com.alibaba.cloud.ai.dataagent.common.request.SchemaInitRequest;
+import com.alibaba.cloud.ai.dataagent.config.DataAgentProperties;
 import com.alibaba.cloud.ai.dataagent.constant.Constant;
 import com.alibaba.cloud.ai.dataagent.constant.DocumentMetadataConstant;
-import com.alibaba.cloud.ai.dataagent.common.request.AgentSearchRequest;
-import com.alibaba.cloud.ai.dataagent.common.request.SchemaInitRequest;
 import com.alibaba.cloud.ai.dataagent.service.TableMetadataService;
 import com.alibaba.cloud.ai.dataagent.service.hybrid.retrieval.HybridRetrievalStrategy;
 import com.alibaba.cloud.ai.dataagent.util.SearchUtil;
@@ -35,6 +36,7 @@ import org.springframework.ai.embedding.BatchingStrategy;
 import org.springframework.ai.vectorstore.SearchRequest;
 import org.springframework.ai.vectorstore.SimpleVectorStore;
 import org.springframework.ai.vectorstore.VectorStore;
+import org.springframework.ai.vectorstore.filter.Filter;
 import org.springframework.stereotype.Service;
 import org.springframework.util.Assert;
 
@@ -67,10 +69,12 @@ public class AgentVectorStoreServiceImpl implements AgentVectorStoreService {
 
 	protected final TableMetadataService tableMetadataService;
 
+	private final DynamicFilterService dynamicFilterService;
+
 	public AgentVectorStoreServiceImpl(VectorStore vectorStore, ExecutorService dbOperationExecutor,
 			Optional<HybridRetrievalStrategy> hybridRetrievalStrategy, DataAgentProperties dataAgentProperties,
 			BatchingStrategy batchingStrategy, AccessorFactory accessorFactory,
-			TableMetadataService tableMetadataService) {
+			TableMetadataService tableMetadataService, DynamicFilterService dynamicFilterService) {
 		this.vectorStore = vectorStore;
 		this.dbOperationExecutor = dbOperationExecutor;
 		this.hybridRetrievalStrategy = hybridRetrievalStrategy;
@@ -78,6 +82,7 @@ public class AgentVectorStoreServiceImpl implements AgentVectorStoreService {
 		this.batchingStrategy = batchingStrategy;
 		this.accessorFactory = accessorFactory;
 		this.tableMetadataService = tableMetadataService;
+		this.dynamicFilterService = dynamicFilterService;
 		log.info("VectorStore type: {}", vectorStore.getClass().getSimpleName());
 	}
 
@@ -85,12 +90,21 @@ public class AgentVectorStoreServiceImpl implements AgentVectorStoreService {
 	public List<Document> search(AgentSearchRequest searchRequest) {
 		Assert.hasText(searchRequest.getAgentId(), "AgentId cannot be empty");
 		Assert.hasText(searchRequest.getDocVectorType(), "DocVectorType cannot be empty");
+
+		Filter.Expression filter = dynamicFilterService.buildDynamicFilter(searchRequest.getAgentId(),
+				searchRequest.getDocVectorType());
+		HybridSearchRequest hybridRequest = HybridSearchRequest.builder()
+			.query(searchRequest.getQuery())
+			.topK(searchRequest.getTopK())
+			.similarityThreshold(searchRequest.getSimilarityThreshold())
+			.filterExpression(filter)
+			.build();
+
 		if (dataAgentProperties.getVectorStore().isEnableHybridSearch() && hybridRetrievalStrategy.isPresent()) {
-			return hybridRetrievalStrategy.get().retrieve(searchRequest);
+			return hybridRetrievalStrategy.get().retrieve(hybridRequest);
 		}
 		log.debug("Hybrid search is not enabled. use vector-search only");
-		SearchRequest vectorSearchRequest = SearchUtil.buildVectorSearchRequest(searchRequest);
-		List<Document> results = vectorStore.similaritySearch(vectorSearchRequest);
+		List<Document> results = vectorStore.similaritySearch(hybridRequest.toVectorSearchRequest());
 		log.debug("Search completed with vectorType: {}, found {} documents for SearchRequest: {}",
 				searchRequest.getDocVectorType(), results.size(), searchRequest);
 		return results;

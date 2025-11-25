@@ -106,7 +106,7 @@ public class AgentKnowledgeResourceManager {
 
 			Map<String, Object> metadata = new HashMap<>();
 			metadata.put(Constant.AGENT_ID, agentId.toString());
-			metadata.put(DocumentMetadataConstant.KNOWLEDGE_ID, knowledgeId.toString());
+			metadata.put(DocumentMetadataConstant.AGENT_KNOWLEDGE_ID, knowledgeId.toString());
 
 			agentVectorStoreService.deleteDocumentsByMetedata(agentId.toString(), metadata);
 			log.info("Successfully deleted knowledge from vector store, knowledgeId: {}", knowledgeId);
