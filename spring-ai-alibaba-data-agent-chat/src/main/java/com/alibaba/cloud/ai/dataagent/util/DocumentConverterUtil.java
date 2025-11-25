@@ -104,7 +104,7 @@ public class DocumentConverterUtil {
 	public static Document convertBusinessKnowledgeToDocument(BusinessKnowledge businessKnowledge) {
 
 		// 构建文档内容，包含业务名词、说明和同义词
-		String businessTerm = Optional.ofNullable(businessKnowledge.getBusinessTerm()).orElse("无");
+		String businessTerm = businessKnowledge.getBusinessTerm();
 		String description = Optional.ofNullable(businessKnowledge.getDescription()).orElse("无");
 		String synonyms = Optional.ofNullable(businessKnowledge.getSynonyms()).orElse("无");
 
@@ -114,8 +114,8 @@ public class DocumentConverterUtil {
 		Map<String, Object> metadata = new HashMap<>();
 		metadata.put(DocumentMetadataConstant.VECTOR_TYPE, DocumentMetadataConstant.BUSINESS_TERM);
 		metadata.put(Constant.AGENT_ID, businessKnowledge.getAgentId().toString());
-		metadata.put(DocumentMetadataConstant.IS_RECALL,
-				Optional.ofNullable(businessKnowledge.getIsRecall()).orElse(0).toString());
+		metadata.put(DocumentMetadataConstant.BUSINESS_TERM_ID, businessKnowledge.getId().toString());
+
 		String docId = generateFixedBusinessKnowledgeDocId(businessKnowledge.getAgentId().toString(),
 				businessKnowledge.getId());
 		return new Document(docId, content, metadata);

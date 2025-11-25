@@ -128,7 +128,6 @@ public class BusinessKnowledgeServiceImpl implements BusinessKnowledgeService {
 		}
 	}
 
-	// TODO 2025/11/17 后续可优化改造事务性发件箱模式以确保最终一致性
 	/**
 	 * 更新向量库中的知识向量
 	 */
@@ -231,18 +230,10 @@ public class BusinessKnowledgeServiceImpl implements BusinessKnowledgeService {
 			throw new RuntimeException("Knowledge not found with id: " + id);
 		}
 
-		// 召回是要添加到向量库，取消召回是从向量库删除
-		if (isRecall) {
-			knowledge.setIsRecall(1);
-			businessKnowledgeMapper.updateById(knowledge);
-			vectorStore.add(List.of(DocumentConverterUtil.convertBusinessKnowledgeToDocument(knowledge)));
-		}
-		else {
-			knowledge.setIsRecall(0);
-			businessKnowledgeMapper.updateById(knowledge);
-			vectorStore.delete(List
-				.of(DocumentConverterUtil.generateFixedBusinessKnowledgeDocId(knowledge.getAgentId().toString(), id)));
-		}
+		// 更新数据库即可，不需要更新向量库，混合检索的的时候会根据 isRecall 字段过滤了
+		knowledge.setIsRecall(1);
+		businessKnowledgeMapper.updateById(knowledge);
+
 	}
 
 	@Override
