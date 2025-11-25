@@ -17,14 +17,14 @@
 package com.alibaba.cloud.ai.dataagent.service.impl;
 
 import com.alibaba.cloud.ai.dataagent.common.connector.config.DbConfig;
+import com.alibaba.cloud.ai.dataagent.common.request.SchemaInitRequest;
 import com.alibaba.cloud.ai.dataagent.entity.AgentDatasource;
 import com.alibaba.cloud.ai.dataagent.entity.Datasource;
 import com.alibaba.cloud.ai.dataagent.mapper.AgentDatasourceMapper;
 import com.alibaba.cloud.ai.dataagent.mapper.AgentDatasourceTablesMapper;
-import com.alibaba.cloud.ai.dataagent.common.request.SchemaInitRequest;
 import com.alibaba.cloud.ai.dataagent.service.AgentDatasourceService;
 import com.alibaba.cloud.ai.dataagent.service.datasource.DatasourceService;
-import com.alibaba.cloud.ai.dataagent.service.vectorstore.AgentVectorStoreService;
+import com.alibaba.cloud.ai.dataagent.service.schema.SchemaService;
 import com.alibaba.cloud.ai.dataagent.util.SchemaProcessorUtil;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -42,7 +42,7 @@ public class AgentDatasourceServiceImpl implements AgentDatasourceService {
 
 	private final DatasourceService datasourceService;
 
-	private final AgentVectorStoreService vectorStoreService;
+	private final SchemaService schemaService;
 
 	private final AgentDatasourceMapper agentDatasourceMapper;
 
@@ -75,7 +75,7 @@ public class AgentDatasourceServiceImpl implements AgentDatasourceService {
 			log.info("Created SchemaInitRequest for agent: {}, dbConfig: {}, tables: {}", agentIdStr, dbConfig, tables);
 
 			// Call the original initialization method
-			return vectorStoreService.schema(agentIdStr, schemaInitRequest);
+			return schemaService.schema(agentIdStr, schemaInitRequest);
 
 		}
 		catch (Exception e) {
