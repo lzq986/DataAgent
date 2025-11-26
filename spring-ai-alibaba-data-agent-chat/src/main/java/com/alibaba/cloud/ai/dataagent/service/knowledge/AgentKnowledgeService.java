@@ -21,19 +21,20 @@ import com.alibaba.cloud.ai.dataagent.dto.agentknowledge.AgentKnowledgeQueryDTO;
 import com.alibaba.cloud.ai.dataagent.dto.agentknowledge.CreateKnowledgeDto;
 import com.alibaba.cloud.ai.dataagent.dto.agentknowledge.UpdateKnowledgeDto;
 import com.alibaba.cloud.ai.dataagent.entity.AgentKnowledge;
+import com.alibaba.cloud.ai.dataagent.vo.AgentKnowledgeVO;
 
 public interface AgentKnowledgeService {
 
 	AgentKnowledge getKnowledgeById(Integer id);
 
-	boolean createKnowledge(CreateKnowledgeDto createKnowledgeDto);
+	AgentKnowledgeVO createKnowledge(CreateKnowledgeDto createKnowledgeDto);
 
-	boolean updateKnowledge(Integer id, UpdateKnowledgeDto updateKnowledgeDto);
+	AgentKnowledgeVO updateKnowledge(Integer id, UpdateKnowledgeDto updateKnowledgeDto);
 
 	boolean deleteKnowledge(Integer id);
 
-	PageResult<AgentKnowledge> queryByConditionsWithPage(AgentKnowledgeQueryDTO queryDTO);
+	PageResult<AgentKnowledgeVO> queryByConditionsWithPage(AgentKnowledgeQueryDTO queryDTO);
 
-	boolean updateKnowledgeRecallStatus(Integer id, Integer recalled);
+	AgentKnowledgeVO updateKnowledgeRecallStatus(Integer id, Integer recalled);
 
 }

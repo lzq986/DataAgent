@@ -1,11 +1,11 @@
-/**
+/*
  * Copyright 2024-2025 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- * https://www.apache.org/licenses/LICENSE-2.0
+ *      https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -13,11 +13,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-package com.alibaba.cloud.ai.dataagent.entity;
+package com.alibaba.cloud.ai.dataagent.vo;
 
 import com.alibaba.cloud.ai.dataagent.enums.EmbeddingStatus;
-import com.alibaba.cloud.ai.dataagent.enums.KnowledgeType;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -25,13 +23,10 @@ import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
 
-/**
- * Agent Knowledge Entity Class
- */
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class AgentKnowledge {
+public class AgentKnowledgeVO {
 
 	private Integer id;
 
@@ -40,7 +35,7 @@ public class AgentKnowledge {
 	private String title;
 
 	// DOCUMENT, QA, FAQ
-	private KnowledgeType type;
+	private String type;
 
 	// FAQ QA 问题
 	private String question;
@@ -57,28 +52,10 @@ public class AgentKnowledge {
 	// 操作失败的错误信息
 	private String errorMsg;
 
-	private String sourceFilename;
-
-	// 文件路径
-	private String filePath;
-
-	// 文件大小（字节）
-	private Long fileSize;
-
-	// 文件类型
-	private String fileType;
-
 	@JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
 	private LocalDateTime createdTime;
 
 	@JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
 	private LocalDateTime updatedTime;
-
-	// 0=未删除, 1=已删除
-	private Integer isDeleted;
-
-	// 0=物理资源（文件和向量）未清理, 1=物理资源已清理
-	// 默认值是 0
-	private Integer isResourceCleaned;
 
 }

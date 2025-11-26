@@ -20,7 +20,6 @@ import com.alibaba.cloud.ai.dataagent.dto.agentknowledge.AgentKnowledgeQueryDTO;
 import com.alibaba.cloud.ai.dataagent.entity.AgentKnowledge;
 import org.apache.ibatis.annotations.*;
 
-import java.time.LocalDateTime;
 import java.util.List;
 
 @Mapper
@@ -34,7 +33,7 @@ public interface AgentKnowledgeMapper {
 	@Insert("""
 
 			INSERT INTO agent_knowledge (agent_id, title, content, type, question, is_recall, embedding_status, source_filename, file_path, file_size, file_type, is_deleted, is_resource_cleaned, created_time, updated_time)
-			VALUES (#{agentId}, #{title}, #{content}, #{type.code}, #{question}, #{isRecall}, #{embeddingStatus.value}, #{sourceFilename}, #{filePath}, #{fileSize}, #{fileType}, #{isDeleted}, #{isResourceCleaned}, #{createdTime}, #{updatedTime})
+			VALUES (#{agentId}, #{title}, #{content}, #{type.code}, #{question}, #{isRecall}, #{embeddingStatus}, #{sourceFilename}, #{filePath}, #{fileSize}, #{fileType}, #{isDeleted}, #{isResourceCleaned}, #{createdTime}, #{updatedTime})
 
 			""")
 	@Options(useGeneratedKeys = true, keyProperty = "id", keyColumn = "id")
@@ -49,7 +48,7 @@ public interface AgentKnowledgeMapper {
 				<if test="type != null">type = #{type.code},</if>
 				<if test="question != null">question = #{question},</if>
 				<if test="isRecall != null">is_recall = #{isRecall},</if>
-				<if test="embeddingStatus != null">embedding_status = #{embeddingStatus.value},</if>
+				<if test="embeddingStatus != null">embedding_status = #{embeddingStatus},</if>
 				<if test="sourceFilename != null">source_filename = #{sourceFilename},</if>
 				<if test="filePath != null">file_path = #{filePath},</if>
 				<if test="fileSize != null">file_size = #{fileSize},</if>
@@ -62,12 +61,6 @@ public interface AgentKnowledgeMapper {
 			</script>
 			""")
 	int update(AgentKnowledge knowledge);
-
-	@Update("""
-			UPDATE agent_knowledge SET embedding_status = #{embeddingStatus}, error_msg = #{errorMsg}, updated_time = #{now} WHERE id = #{id} AND is_deleted = 0
-			""")
-	int updateEmbeddingStatus(@Param("id") Integer id, @Param("embeddingStatus") String embeddingStatus,
-			@Param("errorMsg") String errorMsg, @Param("now") LocalDateTime now);
 
 	@Select("""
 			<script>

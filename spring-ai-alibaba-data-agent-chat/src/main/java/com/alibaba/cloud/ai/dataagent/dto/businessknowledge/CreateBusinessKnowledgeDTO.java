@@ -13,50 +13,36 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.alibaba.cloud.ai.dataagent.entity;
+package com.alibaba.cloud.ai.dataagent.dto.businessknowledge;
 
-import com.alibaba.cloud.ai.dataagent.enums.EmbeddingStatus;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.time.LocalDateTime;
-
 /**
- * Business Knowledge Management Entity Class
+ * Business knowledge management entity class
  */
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class BusinessKnowledge {
+public class CreateBusinessKnowledgeDTO {
 
-	private Long id;
-
+	@NotBlank(message = "Business term cannot be empty")
 	private String businessTerm; // Business term
 
+	@NotBlank(message = "Description cannot be empty")
 	private String description; // Description
 
-	private String synonyms; // Synonyms, comma-separated
+	private String synonyms; // Synonyms, comma separated
 
 	@Builder.Default
-	private Integer isRecall = 1; // Whether to recall (0: not recall, 1: recall)
+	private Integer isRecall = 0; // Whether to recall
 
+	@NotNull(message = "Agent ID cannot be Null")
 	private Long agentId; // Associated agent ID
-
-	private LocalDateTime createdTime;
-
-	private LocalDateTime updatedTime;
-
-	// 向量化状态：PENDING待处理，PROCESSING处理中，COMPLETED已完成，FAILED失败
-	private EmbeddingStatus embeddingStatus;
-
-	// 操作失败的错误信息
-	private String errorMsg;
-
-	// 0=未删除, 1=已删除
-	@Builder.Default
-	private Integer isDeleted = 0;
 
 }

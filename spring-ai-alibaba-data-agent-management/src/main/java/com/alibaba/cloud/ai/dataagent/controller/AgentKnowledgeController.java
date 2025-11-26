@@ -23,12 +23,12 @@ import com.alibaba.cloud.ai.dataagent.dto.agentknowledge.UpdateKnowledgeDto;
 import com.alibaba.cloud.ai.dataagent.entity.AgentKnowledge;
 import com.alibaba.cloud.ai.dataagent.service.file.FileStorageService;
 import com.alibaba.cloud.ai.dataagent.service.knowledge.AgentKnowledgeService;
+import com.alibaba.cloud.ai.dataagent.vo.AgentKnowledgeVO;
 import com.alibaba.cloud.ai.dataagent.vo.ApiResponse;
 import com.alibaba.cloud.ai.dataagent.vo.PageResponse;
 import jakarta.validation.Valid;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -51,7 +51,7 @@ public class AgentKnowledgeController {
 	 * Query knowledge details by ID
 	 */
 	@GetMapping("/{id}")
-	public ApiResponse getKnowledgeById(@PathVariable("id") Integer id) {
+	public ApiResponse<AgentKnowledge> getKnowledgeById(@PathVariable("id") Integer id) {
 		try {
 			AgentKnowledge knowledge = agentKnowledgeService.getKnowledgeById(id);
 			if (knowledge != null) {
@@ -71,41 +71,40 @@ public class AgentKnowledgeController {
 	 * Create knowledge without file (application/json)
 	 */
 	@PostMapping("/create")
-	public ApiResponse createKnowledgeWithoutFile(@Valid CreateKnowledgeDto createKnowledgeDto) {
-		boolean success = agentKnowledgeService.createKnowledge(createKnowledgeDto);
-		return success ? ApiResponse.success("创建知识成功，后台向量存储开始更新，请耐心等待...") : ApiResponse.error("创建知识失败");
+	public ApiResponse<AgentKnowledgeVO> createKnowledgeWithoutFile(@Valid CreateKnowledgeDto createKnowledgeDto) {
+		AgentKnowledgeVO knowledge = agentKnowledgeService.createKnowledge(createKnowledgeDto);
+		return ApiResponse.success("创建知识成功，后台向量存储开始更新，请耐心等待...", knowledge);
 	}
 
 	/**
 	 * Update knowledge
 	 */
 	@PutMapping("/{id}")
-	public ApiResponse updateKnowledge(@PathVariable("id") Integer id,
+	public ApiResponse<AgentKnowledgeVO> updateKnowledge(@PathVariable("id") Integer id,
 			@RequestBody UpdateKnowledgeDto updateKnowledgeDto) {
-
-		boolean success = agentKnowledgeService.updateKnowledge(id, updateKnowledgeDto);
-		return success ? ApiResponse.success("更新知识成功") : ApiResponse.error("更新知识失败");
+		AgentKnowledgeVO knowledge = agentKnowledgeService.updateKnowledge(id, updateKnowledgeDto);
+		return ApiResponse.success("更新成功", knowledge);
 	}
 
 	@PutMapping("/knowledge/{id}/recall-status/{recalled}")
-	public ResponseEntity<Boolean> updateRecallStatus(@PathVariable Integer id, @PathVariable Integer recalled) {
-		boolean result = agentKnowledgeService.updateKnowledgeRecallStatus(id, recalled);
-		return ResponseEntity.ok(result);
+	public ApiResponse<AgentKnowledgeVO> updateRecallStatus(@PathVariable Integer id, @PathVariable Integer recalled) {
+		AgentKnowledgeVO agentKnowledgeVO = agentKnowledgeService.updateKnowledgeRecallStatus(id, recalled);
+		return ApiResponse.success("更新成功", agentKnowledgeVO);
 	}
 
 	/**
 	 * Delete knowledge
 	 */
 	@DeleteMapping("/{id}")
-	public ApiResponse deleteKnowledge(@PathVariable("id") Integer id) {
+	public ApiResponse<Boolean> deleteKnowledge(@PathVariable("id") Integer id) {
 		return agentKnowledgeService.deleteKnowledge(id) ? ApiResponse.success("删除操作已接收，等待后台删除相关资源...")
 				: ApiResponse.error("删除失败");
 	}
 
 	@PostMapping("/query/page")
-	public PageResponse<List<AgentKnowledge>> queryByPage(@Valid @RequestBody AgentKnowledgeQueryDTO queryDTO) {
+	public PageResponse<List<AgentKnowledgeVO>> queryByPage(@Valid @RequestBody AgentKnowledgeQueryDTO queryDTO) {
 		try {
-			PageResult<AgentKnowledge> pageResult = agentKnowledgeService.queryByConditionsWithPage(queryDTO);
+			PageResult<AgentKnowledgeVO> pageResult = agentKnowledgeService.queryByConditionsWithPage(queryDTO);
 			return PageResponse.success(pageResult.getData(), pageResult.getTotal(), pageResult.getPageNum(),
 					pageResult.getPageSize(), pageResult.getTotalPages());
 		}

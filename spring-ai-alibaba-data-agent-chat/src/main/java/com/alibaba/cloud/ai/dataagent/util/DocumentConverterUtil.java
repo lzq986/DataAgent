@@ -64,16 +64,14 @@ public class DocumentConverterUtil {
 		metadata.put("type", columnInfoBO.getType());
 		metadata.put("primary", columnInfoBO.isPrimary());
 		metadata.put("notnull", columnInfoBO.isNotnull());
-		metadata.put("vectorType", "column");
-		metadata.put("agentId", agentId);
+		metadata.put(DocumentMetadataConstant.VECTOR_TYPE, DocumentMetadataConstant.COLUMN);
+		metadata.put(Constant.AGENT_ID, agentId);
 
 		if (columnInfoBO.getSamples() != null) {
 			metadata.put("samples", columnInfoBO.getSamples());
 		}
 
-		String docId = DocumentMetadataConstant.COLUMN + ":" + agentId + ":" + tableInfoBO.getName() + ":"
-				+ columnInfoBO.getName();
-		return new Document(docId, text, metadata);
+		return new Document(text, metadata);
 	}
 
 	/**
@@ -89,10 +87,9 @@ public class DocumentConverterUtil {
 		metadata.put("description", Optional.ofNullable(tableInfoBO.getDescription()).orElse(""));
 		metadata.put("foreignKey", Optional.ofNullable(tableInfoBO.getForeignKey()).orElse(""));
 		metadata.put("primaryKey", Optional.ofNullable(tableInfoBO.getPrimaryKeys()).orElse(new ArrayList<>()));
-		metadata.put("vectorType", "table");
-		metadata.put("agentId", agentId);
-		String docId = DocumentMetadataConstant.TABLE + ":" + agentId + ":" + tableInfoBO.getName();
-		return new Document(docId, text, metadata);
+		metadata.put(DocumentMetadataConstant.VECTOR_TYPE, DocumentMetadataConstant.TABLE);
+		metadata.put(Constant.AGENT_ID, agentId);
+		return new Document(text, metadata);
 	}
 
 	public static List<Document> convertTablesToDocuments(String agentId, List<TableInfoBO> tables) {
