@@ -28,6 +28,12 @@ public final class DocumentMetadataConstant {
 	// table
 	public static final String TABLE = "table";
 
+	// name
+	public static final String NAME = "name";
+
+	// tableName
+	public static final String TABLE_NAME = "tableName";
+
 	// vectorType
 	public static final String VECTOR_TYPE = "vectorType";
 

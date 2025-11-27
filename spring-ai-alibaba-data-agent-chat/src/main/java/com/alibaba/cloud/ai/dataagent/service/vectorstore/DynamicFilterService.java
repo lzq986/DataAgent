@@ -27,6 +27,8 @@ import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Component
@@ -52,11 +54,13 @@ public class DynamicFilterService {
 				List<Integer> validIds = agentKnowledgeMapper.selectRecalledKnowledgeIds(Integer.valueOf(agentId));
 
 				if (validIds.isEmpty()) {
-					log.warn("No valid agent knowledge found for agent {}", agentId);
+					log.warn("Agent {} has no recalled knowledge documents. Returning empty filter signal.", agentId);
+					return null;
 				}
-				else
+				else {
 					// 加入 ID 过滤
 					conditions.add(b.in(DocumentMetadataConstant.AGENT_KNOWLEDGE_ID, validIds).build());
+				}
 				break;
 
 			case DocumentMetadataConstant.BUSINESS_TERM:
@@ -65,12 +69,14 @@ public class DynamicFilterService {
 					.selectRecalledKnowledgeIds(Long.valueOf(agentId));
 
 				if (recalledBusinessKnowledgeIds.isEmpty()) {
-					log.warn("No valid business knowledge found for agent {}", agentId);
+					log.warn("Agent {} has no recalled business terms. Returning empty filter signal.", agentId);
+					return null;
 				}
-				else
+				else {
 					// 添加 ID 过滤
 					conditions
 						.add(b.in(DocumentMetadataConstant.BUSINESS_TERM_ID, recalledBusinessKnowledgeIds).build());
+				}
 				break;
 
 			default:
@@ -116,6 +122,125 @@ public class DynamicFilterService {
 		}
 
 		return result;
+	}
+
+	public static String buildFilterExpressionString(Map<String, Object> filterMap) {
+		if (filterMap == null || filterMap.isEmpty()) {
+			return null;
+		}
+
+		// 验证键名是否合法（只包含字母、数字和下划线）
+		for (String key : filterMap.keySet()) {
+			if (!key.matches("[a-zA-Z_][a-zA-Z0-9_]*")) {
+				throw new IllegalArgumentException("Invalid key name: " + key
+						+ ". Keys must start with a letter or underscore and contain only alphanumeric characters and underscores.");
+			}
+		}
+
+		return filterMap.entrySet().stream().map(entry -> {
+			String key = entry.getKey();
+			Object value = entry.getValue();
+
+			// 处理空值
+			if (value == null) {
+				return key + " == null";
+			}
+
+			// 根据值的类型决定如何格式化
+			if (value instanceof String) {
+				// 转义字符串中的特殊字符
+				String escapedValue = escapeStringLiteral((String) value);
+				return key + " == '" + escapedValue + "'";
+			}
+			else if (value instanceof Number) {
+				// 数字类型直接使用
+				return key + " == " + value;
+			}
+			else if (value instanceof Boolean) {
+				// 布尔值使用小写形式
+				return key + " == " + ((Boolean) value).toString().toLowerCase();
+			}
+			else if (value instanceof Enum) {
+				// 枚举类型，转换为字符串并转义
+				String enumValue = ((Enum<?>) value).name();
+				String escapedValue = escapeStringLiteral(enumValue);
+				return key + " == '" + escapedValue + "'";
+			}
+			else {
+				// 其他类型尝试转换为字符串并转义
+				String stringValue = value.toString();
+				String escapedValue = escapeStringLiteral(stringValue);
+				return key + " == '" + escapedValue + "'";
+			}
+		}).collect(Collectors.joining(" && "));
+	}
+
+	/**
+	 * 转义字符串字面量中的特殊字符
+	 */
+	public static String escapeStringLiteral(String input) {
+		if (input == null) {
+			return "";
+		}
+
+		// 转义反斜杠和单引号
+		String escaped = input.replace("\\", "\\\\").replace("'", "\\'");
+
+		// 转义其他特殊字符
+		escaped = escaped.replace("\n", "\\n")
+			.replace("\r", "\\r")
+			.replace("\t", "\\t")
+			.replace("\b", "\\b")
+			.replace("\f", "\\f");
+
+		return escaped;
+	}
+
+	public static Filter.Expression buildFilterExpressionForSearchTables(String agentId, List<String> tableNames) {
+		FilterExpressionBuilder b = new FilterExpressionBuilder();
+		List<Filter.Expression> conditions = new ArrayList<>();
+
+		// 1. 基础条件：agentId
+		conditions.add(b.eq(Constant.AGENT_ID, agentId).build());
+
+		// 2. 基础条件：vectorType = TABLE
+		conditions.add(b.eq(DocumentMetadataConstant.VECTOR_TYPE, DocumentMetadataConstant.TABLE).build());
+
+		// 3. 动态条件：表名列表 IN 查询
+		if (tableNames != null && !tableNames.isEmpty()) {
+			conditions.add(b.in(DocumentMetadataConstant.NAME, tableNames).build());
+		}
+		else {
+			log.warn("Table names list is empty. Returning empty filter signal.");
+			return null;
+		}
+		return combineWithAnd(conditions);
+	}
+
+	public Filter.Expression buildFilterExpressionForSearchColumns(String agentId, String upstreamTableName,
+			List<String> columnNames) {
+		FilterExpressionBuilder b = new FilterExpressionBuilder();
+		List<Filter.Expression> conditions = new ArrayList<>();
+
+		// 1. AgentId 条件
+		conditions.add(b.eq(Constant.AGENT_ID, agentId).build());
+
+		// 2. TableName 条件
+		conditions.add(b.eq(DocumentMetadataConstant.TABLE_NAME, upstreamTableName).build());
+
+		// 3. VectorType 条件
+		conditions.add(b.eq(DocumentMetadataConstant.VECTOR_TYPE, DocumentMetadataConstant.COLUMN).build());
+
+		// 4. ColumnNames IN 条件
+		if (columnNames != null && !columnNames.isEmpty()) {
+			// metadata 中存储列名的字段叫name
+			conditions.add(b.in(DocumentMetadataConstant.NAME, columnNames).build());
+		}
+		else {
+			log.warn("Column names list is empty. Returning empty filter signal.");
+			return null;
+		}
+		return combineWithAnd(conditions);
 	}
 
 }
