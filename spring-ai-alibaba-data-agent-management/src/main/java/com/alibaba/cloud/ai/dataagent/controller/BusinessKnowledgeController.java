@@ -118,4 +118,10 @@ public class BusinessKnowledgeController {
 		}
 	}
 
+	@PostMapping("/retry-embedding/{id}")
+	public ApiResponse<Boolean> retryEmbedding(@PathVariable(value = "id") Long id) {
+		businessKnowledgeService.retryEmbedding(id);
+		return ApiResponse.success("success retry embedding");
+	}
+
 }

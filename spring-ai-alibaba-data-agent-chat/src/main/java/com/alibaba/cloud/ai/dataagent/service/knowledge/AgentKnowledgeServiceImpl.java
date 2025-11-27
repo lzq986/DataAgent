@@ -17,26 +17,27 @@
 package com.alibaba.cloud.ai.dataagent.service.knowledge;
 
 import com.alibaba.cloud.ai.dataagent.converter.AgentKnowledgeConverter;
+import com.alibaba.cloud.ai.dataagent.dto.PageResult;
 import com.alibaba.cloud.ai.dataagent.dto.agentknowledge.AgentKnowledgeQueryDTO;
 import com.alibaba.cloud.ai.dataagent.dto.agentknowledge.CreateKnowledgeDto;
-import com.alibaba.cloud.ai.dataagent.dto.PageResult;
 import com.alibaba.cloud.ai.dataagent.dto.agentknowledge.UpdateKnowledgeDto;
 import com.alibaba.cloud.ai.dataagent.entity.AgentKnowledge;
 import com.alibaba.cloud.ai.dataagent.enums.EmbeddingStatus;
 import com.alibaba.cloud.ai.dataagent.enums.KnowledgeType;
+import com.alibaba.cloud.ai.dataagent.event.AgentKnowledgeDeletionEvent;
+import com.alibaba.cloud.ai.dataagent.event.AgentKnowledgeEmbeddingEvent;
 import com.alibaba.cloud.ai.dataagent.mapper.AgentKnowledgeMapper;
 import com.alibaba.cloud.ai.dataagent.service.file.FileStorageService;
 import com.alibaba.cloud.ai.dataagent.vo.AgentKnowledgeVO;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutorService;
 
 @Slf4j
 @Service
@@ -47,13 +48,11 @@ public class AgentKnowledgeServiceImpl implements AgentKnowledgeService {
 
 	private final AgentKnowledgeMapper agentKnowledgeMapper;
 
-	private final AgentKnowledgeResourceManager agentKnowledgeResourceManager;
-
-	private final ExecutorService executorService;
-
 	private final FileStorageService fileStorageService;
 
 	private final AgentKnowledgeConverter agentKnowledgeConverter;
+
+	private final ApplicationEventPublisher eventPublisher;
 
 	@Override
 	public AgentKnowledge getKnowledgeById(Integer id) {
@@ -85,33 +84,8 @@ public class AgentKnowledgeServiceImpl implements AgentKnowledgeService {
 			throw new RuntimeException("Failed to create knowledge in database.");
 		}
 
-		knowledge.setEmbeddingStatus(EmbeddingStatus.PROCESSING);
-		knowledge.setUpdatedTime(LocalDateTime.now());
-		CompletableFuture.runAsync(() -> {
-			try {
-				// 更新状态为处理中
-				agentKnowledgeMapper.update(knowledge);
-
-				// 执行向量库操作
-				agentKnowledgeResourceManager.doEmbedingToVectorStore(knowledge);
-
-				// 更新状态为已完成
-				knowledge.setEmbeddingStatus(EmbeddingStatus.COMPLETED);
-				knowledge.setUpdatedTime(LocalDateTime.now());
-				agentKnowledgeMapper.update(knowledge);
-
-				log.info("Successfully embedded knowledge to vector store, knowledgeId: {}", knowledge.getId());
-			}
-			catch (Exception e) {
-				// 更新状态为失败，并记录错误信息
-				knowledge.setEmbeddingStatus(EmbeddingStatus.FAILED);
-				knowledge.setErrorMsg(e.getMessage());
-				knowledge.setUpdatedTime(LocalDateTime.now());
-				agentKnowledgeMapper.update(knowledge);
-
-				log.error("Failed to embed knowledge to vector store, knowledgeId: {}", knowledge.getId(), e);
-			}
-		}, executorService);
+		eventPublisher.publishEvent(new AgentKnowledgeEmbeddingEvent(this, knowledge.getId()));
+		log.info("Knowledge created and event published. Id: {}", knowledge.getId());
 
 		return agentKnowledgeConverter.toVo(knowledge);
 	}
@@ -174,39 +148,12 @@ public class AgentKnowledgeServiceImpl implements AgentKnowledgeService {
 		knowledge.setIsDeleted(1);
 		knowledge.setIsResourceCleaned(0);
 		knowledge.setUpdatedTime(LocalDateTime.now());
-		agentKnowledgeMapper.update(knowledge);
 
-		// 异步删除相关资源
-		CompletableFuture.runAsync(() -> {
-			boolean vectorDeleted;
-			boolean fileDeleted;
-
-			try {
-				Long agentId = Long.valueOf(knowledge.getAgentId());
-
-				// 删除向量
-				vectorDeleted = agentKnowledgeResourceManager.deleteFromVectorStore(agentId, id);
-
-				// 删除文件
-				fileDeleted = agentKnowledgeResourceManager.deleteKnowledgeFile(knowledge);
-
-				if (!vectorDeleted || !fileDeleted) {
-					log.error("Knowledge soft deleted but resources clean up failed. ID: {}, Vector: {}, File: {}", id,
-							vectorDeleted, fileDeleted);
-				}
-				else {
-					knowledge.setIsResourceCleaned(1);
-					agentKnowledgeMapper.update(knowledge);
-					log.info("Knowledge resources cleaned up successfully. ID: {}", id);
-				}
-			}
-			catch (Exception e) {
-				log.error("Exception during async resource cleanup for knowledgeId: {}", id, e);
-			}
-		}, executorService);
-
-		// 立即返回true，表示删除请求已接受
-		return true;
+		if (agentKnowledgeMapper.update(knowledge) > 0) {
+			eventPublisher.publishEvent(new AgentKnowledgeDeletionEvent(this, id));
+			return true;
+		}
+		return false;
 	}
 
 	@Override
@@ -246,6 +193,27 @@ public class AgentKnowledgeServiceImpl implements AgentKnowledgeService {
 			throw new RuntimeException("Failed to update knowledge in database.");
 		}
 		return agentKnowledgeConverter.toVo(knowledge);
+	}
+
+	@Override
+	public void retryEmbedding(Integer id) {
+		AgentKnowledge knowledge = agentKnowledgeMapper.selectById(id);
+		if (knowledge.getEmbeddingStatus().equals(EmbeddingStatus.PROCESSING)) {
+			throw new RuntimeException("BusinessKnowledge is processing, please wait.");
+		}
+
+		// 非召回的不处理
+		if (knowledge.getIsRecall() == null || knowledge.getIsRecall() == 0) {
+			throw new RuntimeException("BusinessKnowledge is not recalled, please recall it first.");
+		}
+
+		// 重置状态
+		// 立刻给用户反馈“已变成处理中”
+		knowledge.setEmbeddingStatus(EmbeddingStatus.PENDING);
+		knowledge.setErrorMsg("");
+		agentKnowledgeMapper.update(knowledge);
+		eventPublisher.publishEvent(new AgentKnowledgeEmbeddingEvent(this, knowledge.getId()));
+		log.info("Retry embedding for knowledgeId: {}", id);
 	}
 
 }

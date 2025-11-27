@@ -35,7 +35,10 @@ public class AgentKnowledgeResourceManager {
 		this.agentVectorStoreService = agentVectorStoreService;
 	}
 
-	public void doEmbedingToVectorStore(AgentKnowledge agentKnowledge) {
+	public void doEmbedingToVectorStore(AgentKnowledge agentKnowledge) throws Exception {
+		// delete old data
+		this.deleteFromVectorStore(agentKnowledge.getAgentId(), agentKnowledge.getId());
+
 		if (KnowledgeType.QA.equals(agentKnowledge.getType()) || KnowledgeType.FAQ.equals(agentKnowledge.getType())) {
 			processQaKnowledge(agentKnowledge);
 		}
@@ -43,45 +46,34 @@ public class AgentKnowledgeResourceManager {
 			processDocumentKnowledge(agentKnowledge);
 		}
 		else {
-			log.error("Unsupported knowledge type: {}", agentKnowledge.getType().getCode());
+			throw new RuntimeException("Unsupported KnowledgeType: " + agentKnowledge.getType());
 		}
 	}
 
 	private void processQaKnowledge(AgentKnowledge knowledge) {
 		Document document = DocumentConverterUtil.convertQaFaqKnowledgeToDocument(knowledge);
-
-		try {
-			agentVectorStoreService.addDocuments(knowledge.getAgentId().toString(), List.of(document));
-			log.info("Successfully vectorized AgentKnowledge: id={}, type={}", knowledge.getId(), knowledge.getType());
-		}
-		catch (Exception e) {
-			log.error("Failed to add document to vector store: knowledgeId={}", knowledge.getId(), e);
-		}
+		agentVectorStoreService.addDocuments(knowledge.getAgentId().toString(), List.of(document));
+		log.info("Successfully vectorized AgentKnowledge: id={}, type={}", knowledge.getId(), knowledge.getType());
 	}
 
 	private void processDocumentKnowledge(AgentKnowledge knowledge) {
-		try {
-			// 处理文档
-			List<Document> documents = getAndSplitDocument(knowledge.getFilePath());
-			if (documents == null || documents.isEmpty()) {
-				log.error("No documents extracted from file: knowledgeId={}, filePath={}", knowledge.getId(),
-						knowledge.getFilePath());
-				return;
-			}
 
-			// 使用工具类为文档添加元数据
-			List<Document> documentsWithMetadata = DocumentConverterUtil.convertDocumentsWithMetadata(documents,
-					knowledge);
-
-			// 添加到向量存储
-			agentVectorStoreService.addDocuments(knowledge.getAgentId().toString(), documentsWithMetadata);
-			log.info("Successfully vectorized DOCUMENT knowledge: id={}, filePath={}, documentCount={}",
-					knowledge.getId(), knowledge.getFilePath(), documentsWithMetadata.size());
+		// 处理文档
+		List<Document> documents = getAndSplitDocument(knowledge.getFilePath());
+		if (documents == null || documents.isEmpty()) {
+			log.error("No documents extracted from file: knowledgeId={}, filePath={}", knowledge.getId(),
+					knowledge.getFilePath());
+			throw new RuntimeException("No documents extracted from file");
 		}
-		catch (Exception e) {
 
-			log.error("Failed to process DOCUMENT knowledge: knowledgeId={}", knowledge.getId(), e);
-		}
+		// 使用工具类为文档添加元数据
+		List<Document> documentsWithMetadata = DocumentConverterUtil.convertDocumentsWithMetadata(documents, knowledge);
+
+		// 添加到向量存储
+		agentVectorStoreService.addDocuments(knowledge.getAgentId().toString(), documentsWithMetadata);
+		log.info("Successfully vectorized DOCUMENT knowledge: id={}, filePath={}, documentCount={}", knowledge.getId(),
+				knowledge.getFilePath(), documentsWithMetadata.size());
+
 	}
 
 	private List<Document> getAndSplitDocument(String filePath) {
@@ -101,7 +93,7 @@ public class AgentKnowledgeResourceManager {
 	 * @param knowledgeId 知识ID
 	 * @return 是否删除成功（如果资源不存在也视为成功，实现等幂操作）
 	 */
-	public boolean deleteFromVectorStore(Long agentId, Integer knowledgeId) {
+	public boolean deleteFromVectorStore(Integer agentId, Integer knowledgeId) {
 		try {
 
 			Map<String, Object> metadata = new HashMap<>();

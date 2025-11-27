@@ -37,4 +37,6 @@ public interface AgentKnowledgeService {
 
 	AgentKnowledgeVO updateKnowledgeRecallStatus(Integer id, Integer recalled);
 
+	void retryEmbedding(Integer id);
+
 }

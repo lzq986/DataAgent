@@ -30,6 +30,11 @@ public interface AgentKnowledgeMapper {
 			""")
 	AgentKnowledge selectById(@Param("id") Integer id);
 
+	@Select("""
+			    SELECT * FROM agent_knowledge WHERE id = #{id}
+			""")
+	AgentKnowledge selectByIdIncludeDeleted(@Param("id") Integer id);
+
 	@Insert("""
 
 			INSERT INTO agent_knowledge (agent_id, title, content, type, question, is_recall, embedding_status, source_filename, file_path, file_size, file_type, is_deleted, is_resource_cleaned, created_time, updated_time)

@@ -114,4 +114,10 @@ public class AgentKnowledgeController {
 		}
 	}
 
+	@PostMapping("/retry-embedding/{id}")
+	public ApiResponse<AgentKnowledgeVO> retryEmbedding(@PathVariable Integer id) {
+		agentKnowledgeService.retryEmbedding(id);
+		return ApiResponse.success("重试向量化操作成功，如果是文件解析需要花费点时间，请耐心等待...");
+	}
+
 }

@@ -229,11 +229,19 @@ public class BusinessKnowledgeServiceImpl implements BusinessKnowledgeService {
 	}
 
 	@Override
-	@Transactional(rollbackFor = Exception.class)
 	public void retryEmbedding(Long id) {
 		BusinessKnowledge knowledge = businessKnowledgeMapper.selectById(id);
 		if (knowledge == null) {
 			throw new RuntimeException("BusinessKnowledge not found with id: " + id);
+		}
+
+		if (knowledge.getEmbeddingStatus().equals(EmbeddingStatus.PROCESSING)) {
+			throw new RuntimeException("BusinessKnowledge is processing, please wait.");
+		}
+
+		// 非召回的不处理
+		if (knowledge.getIsRecall() == null || knowledge.getIsRecall() == 0) {
+			throw new RuntimeException("BusinessKnowledge is not recalled, please recall it first.");
 		}
 
 		try {
@@ -246,6 +254,7 @@ public class BusinessKnowledgeServiceImpl implements BusinessKnowledgeService {
 			// 再次失败，更新错误信息
 			knowledge.setEmbeddingStatus(EmbeddingStatus.FAILED);
 			knowledge.setErrorMsg(e.getMessage().length() > 200 ? e.getMessage().substring(0, 200) : e.getMessage());
+			businessKnowledgeMapper.updateById(knowledge);
 			throw new RuntimeException("重试失败: " + e.getMessage());
 		}
 

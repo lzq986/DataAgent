@@ -29,7 +29,6 @@ import com.alibaba.cloud.ai.graph.exception.GraphStateException;
 import com.alibaba.cloud.ai.graph.state.strategy.ReplaceStrategy;
 import com.knuddels.jtokkit.api.EncodingType;
 import lombok.extern.slf4j.Slf4j;
-import org.jetbrains.annotations.NotNull;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.ai.embedding.BatchingStrategy;
@@ -49,6 +48,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Primary;
 import org.springframework.http.client.reactive.ReactorClientHttpConnector;
+import org.springframework.scheduling.annotation.EnableAsync;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.netty.http.client.HttpClient;
 
@@ -56,9 +56,7 @@ import java.time.Duration;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static com.alibaba.cloud.ai.dataagent.constant.Constant.*;
@@ -74,6 +72,7 @@ import static com.alibaba.cloud.ai.graph.action.AsyncEdgeAction.edge_async;
  */
 @Slf4j
 @Configuration
+@EnableAsync
 @EnableConfigurationProperties({ CodeExecutorProperties.class, DataAgentProperties.class, FileStorageProperties.class })
 public class DataAgentConfiguration implements DisposableBean {
 
@@ -283,34 +282,64 @@ public class DataAgentConfiguration implements DisposableBean {
 	public ExecutorService dbOperationExecutor() {
 		// 初始化专用线程池，用于数据库操作
 		// 线程数量设置为CPU核心数的2倍，但不少于4个，不超过16个
-		int threadCount = Math.max(4, Math.min(Runtime.getRuntime().availableProcessors() * 2, 16));
-		log.info("Database operation executor initialized with {} threads", threadCount);
-		dbOperationExecutor = Executors.newFixedThreadPool(threadCount, new ThreadFactory() {
+		int corePoolSize = Math.max(4, Math.min(Runtime.getRuntime().availableProcessors() * 2, 16));
+		log.info("Database operation executor initialized with {} threads", corePoolSize);
+
+		// 自定义线程工厂
+		ThreadFactory threadFactory = new ThreadFactory() {
 			private final AtomicInteger threadNumber = new AtomicInteger(1);
 
 			@Override
-			public Thread newThread(@NotNull Runnable r) {
+			public Thread newThread(Runnable r) {
 				Thread t = new Thread(r, "db-operation-" + threadNumber.getAndIncrement());
-				t.setDaemon(true);
+				t.setDaemon(false);
+				if (t.getPriority() != Thread.NORM_PRIORITY) {
+					t.setPriority(Thread.NORM_PRIORITY);
+				}
 				return t;
 			}
-		});
+		};
+
+		// 创建原生线程池
+		this.dbOperationExecutor = new ThreadPoolExecutor(corePoolSize, corePoolSize, 60L, TimeUnit.SECONDS,
+				new LinkedBlockingQueue<>(500), threadFactory, new ThreadPoolExecutor.CallerRunsPolicy());
+
 		return dbOperationExecutor;
 	}
 
 	@Override
 	public void destroy() {
 		if (dbOperationExecutor != null && !dbOperationExecutor.isShutdown()) {
-			log.info("Shutting down database operation executor");
+			log.info("Shutting down database operation executor...");
+
+			// 记录关闭前的状态，便于排查问题
+			if (dbOperationExecutor instanceof ThreadPoolExecutor tpe) {
+				log.info("Executor Status before shutdown: [Queue Size: {}], [Active Count: {}], [Completed Tasks: {}]",
+						tpe.getQueue().size(), tpe.getActiveCount(), tpe.getCompletedTaskCount());
+			}
+
+			// 1. 停止接收新任务
 			dbOperationExecutor.shutdown();
+
 			try {
-				if (!dbOperationExecutor.awaitTermination(30, java.util.concurrent.TimeUnit.SECONDS)) {
-					log.warn("Database operation executor did not terminate gracefully, forcing shutdown");
+				// 2. 等待现有任务完成（包括队列中的）
+				if (!dbOperationExecutor.awaitTermination(60, TimeUnit.SECONDS)) {
+					log.warn("Executor did not terminate in 60s. Forcing shutdown...");
+
+					// 3. 超时强行关闭
 					dbOperationExecutor.shutdownNow();
+
+					// 4. 再次确认是否关闭
+					if (!dbOperationExecutor.awaitTermination(10, TimeUnit.SECONDS)) {
+						log.error("Executor failed to terminate completely.");
+					}
+				}
+				else {
+					log.info("Database operation executor terminated gracefully.");
 				}
 			}
 			catch (InterruptedException e) {
-				log.warn("Interrupted while waiting for database operation executor to terminate");
+				log.warn("Interrupted during executor shutdown. Forcing immediate shutdown.");
 				dbOperationExecutor.shutdownNow();
 				Thread.currentThread().interrupt();
 			}

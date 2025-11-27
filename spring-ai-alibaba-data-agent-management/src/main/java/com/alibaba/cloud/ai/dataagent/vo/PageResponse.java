@@ -25,7 +25,7 @@ import lombok.NoArgsConstructor;
 @Data
 @NoArgsConstructor
 @EqualsAndHashCode(callSuper = true)
-public class PageResponse<T> extends ApiResponse {
+public class PageResponse<T> extends ApiResponse<T> {
 
 	/**
 	 * 总记录数
