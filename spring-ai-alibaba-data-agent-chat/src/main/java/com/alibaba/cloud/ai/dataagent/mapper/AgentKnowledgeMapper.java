@@ -20,6 +20,7 @@ import com.alibaba.cloud.ai.dataagent.dto.agentknowledge.AgentKnowledgeQueryDTO;
 import com.alibaba.cloud.ai.dataagent.entity.AgentKnowledge;
 import org.apache.ibatis.annotations.*;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Mapper
@@ -107,5 +108,18 @@ public interface AgentKnowledgeMapper {
 			SELECT id FROM agent_knowledge WHERE agent_id = #{agentId} AND is_recall = 1 AND is_deleted = 0
 			""")
 	List<Integer> selectRecalledKnowledgeIds(@Param("agentId") Integer agentId);
+
+	/**
+	 * 查询待清理的“僵尸”记录 条件：is_deleted = 1 AND is_resource_cleaned = 0 AND updated_time < (当前时间
+	 * - N分钟)
+	 */
+	@Select("""
+			    SELECT * FROM agent_knowledge
+			    WHERE is_deleted = 1
+			      AND is_resource_cleaned = 0
+			      AND updated_time < #{beforeTime}
+			    LIMIT #{limit}
+			""")
+	List<AgentKnowledge> selectDirtyRecords(@Param("beforeTime") LocalDateTime beforeTime, @Param("limit") int limit);
 
 }

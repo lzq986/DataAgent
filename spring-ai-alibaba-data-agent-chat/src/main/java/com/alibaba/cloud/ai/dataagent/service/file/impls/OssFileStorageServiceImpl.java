@@ -112,12 +112,12 @@ public class OssFileStorageServiceImpl implements FileStorageService {
 			if (ossClient.doesObjectExist(ossProperties.getBucketName(), filePath)) {
 				ossClient.deleteObject(ossProperties.getBucketName(), filePath);
 				log.info("成功从OSS删除文件: {}", filePath);
-				return true;
 			}
 			else {
-				log.warn("OSS中文件不存在，无法删除: {}", filePath);
-				return false;
+				// 删除是个等幂的操作，不存在也是当做被删除了
+				log.info("OSS中文件不存在，跳过删除，视为成功: {}", filePath);
 			}
+			return true;
 		}
 		catch (Exception e) {
 			log.error("从OSS删除文件失败: {}", filePath, e);

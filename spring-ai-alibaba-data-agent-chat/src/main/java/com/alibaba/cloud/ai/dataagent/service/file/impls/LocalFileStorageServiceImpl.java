@@ -75,14 +75,14 @@ public class LocalFileStorageServiceImpl implements FileStorageService {
 		try {
 			Path fullPath = Paths.get(fileStorageProperties.getPath(), filePath);
 			if (Files.exists(fullPath)) {
-				Files.delete(fullPath);
+				Files.deleteIfExists(fullPath);
 				log.info("成功删除文件: {}", filePath);
-				return true;
 			}
 			else {
-				log.warn("文件不存在，无法删除: {}", filePath);
-				return false;
+				// 删除是个等幂的操作，不存在也是当做被删除了
+				log.info("文件不存在，跳过删除，视为成功: {}", filePath);
 			}
+			return true;
 		}
 		catch (IOException e) {
 			log.error("删除文件失败: {}", filePath, e);

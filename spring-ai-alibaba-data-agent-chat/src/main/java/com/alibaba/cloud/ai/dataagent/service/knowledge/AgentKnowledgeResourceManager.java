@@ -13,11 +13,13 @@ import org.springframework.ai.reader.tika.TikaDocumentReader;
 import org.springframework.ai.transformer.splitter.TextSplitter;
 import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Component;
+import org.springframework.util.StringUtils;
 
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+// 智能体知识的向量资源和文件资源管理
 @Slf4j
 @Component
 public class AgentKnowledgeResourceManager {
@@ -127,7 +129,8 @@ public class AgentKnowledgeResourceManager {
 	 */
 	public boolean deleteKnowledgeFile(AgentKnowledge knowledge) {
 		// 只有文档类型且有文件路径的知识才需要删除文件
-		if (!KnowledgeType.DOCUMENT.equals(knowledge.getType()) || knowledge.getFilePath() == null) {
+		if (!KnowledgeType.DOCUMENT.equals(knowledge.getType()) || !StringUtils.hasText(knowledge.getFilePath())) {
+			log.info("Not a document type or no file path, knowledgeId: {}, treating as success", knowledge.getId());
 			return true;
 		}
 
@@ -135,12 +138,13 @@ public class AgentKnowledgeResourceManager {
 			boolean fileDeleted = fileStorageService.deleteFile(knowledge.getFilePath());
 			if (fileDeleted) {
 				log.info("Successfully deleted knowledge file, filePath: {}", knowledge.getFilePath());
+				return true;
 			}
 			else {
-				log.info("File already deleted or not found, filePath: {}, treating as success",
-						knowledge.getFilePath());
+				log.error("Failed to delete knowledge file, filePath: {}", knowledge.getFilePath());
+				return false;
 			}
-			return true;
+
 		}
 		catch (Exception e) {
 			// 检查是否是文件不存在的错误，如果是则视为删除成功（等幂操作）
