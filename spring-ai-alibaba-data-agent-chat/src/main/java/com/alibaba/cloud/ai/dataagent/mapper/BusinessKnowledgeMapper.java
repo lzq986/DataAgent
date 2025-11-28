@@ -35,16 +35,6 @@ public interface BusinessKnowledgeMapper {
 	List<BusinessKnowledge> selectByAgentId(@Param("agentId") Long agentId);
 
 	/**
-	 * Query recalled business knowledge list by agent ID
-	 */
-	@Select("""
-			SELECT * FROM business_knowledge
-			WHERE agent_id = #{agentId} AND is_recall = 1 AND is_deleted = 0
-			ORDER BY created_time DESC
-			""")
-	List<BusinessKnowledge> selectRecalledByAgentId(@Param("agentId") Long agentId);
-
-	/**
 	 * Query all business knowledge list
 	 */
 	@Select("SELECT * FROM business_knowledge WHERE is_deleted = 0 ORDER BY created_time DESC")
@@ -94,13 +84,6 @@ public interface BusinessKnowledgeMapper {
 			WHERE id = #{id}
 			""")
 	int deleteById(@Param("id") Long id);
-
-	@Update("""
-			UPDATE business_knowledge
-			SET is_recall = #{isRecall}
-			WHERE id = #{id}
-			""")
-	int changeRecall(@Param("id") Long id, @Param("isRecall") boolean isRecall);
 
 	@Select("""
 			SELECT * FROM business_knowledge

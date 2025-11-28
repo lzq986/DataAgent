@@ -59,7 +59,7 @@ public class DynamicFilterService {
 				}
 				else {
 					// 加入 ID 过滤
-					conditions.add(b.in(DocumentMetadataConstant.AGENT_KNOWLEDGE_ID, validIds).build());
+					conditions.add(b.in(DocumentMetadataConstant.DB_AGENT_KNOWLEDGE_ID, validIds).build());
 				}
 				break;
 
@@ -75,7 +75,7 @@ public class DynamicFilterService {
 				else {
 					// 添加 ID 过滤
 					conditions
-						.add(b.in(DocumentMetadataConstant.BUSINESS_TERM_ID, recalledBusinessKnowledgeIds).build());
+						.add(b.in(DocumentMetadataConstant.DB_BUSINESS_TERM_ID, recalledBusinessKnowledgeIds).build());
 				}
 				break;
 

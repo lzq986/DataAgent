@@ -69,7 +69,8 @@ public class AgentKnowledgeResourceManager {
 		}
 
 		// 使用工具类为文档添加元数据
-		List<Document> documentsWithMetadata = DocumentConverterUtil.convertDocumentsWithMetadata(documents, knowledge);
+		List<Document> documentsWithMetadata = DocumentConverterUtil
+			.convertAgentKnowledgeDocumentsWithMetadata(documents, knowledge);
 
 		// 添加到向量存储
 		agentVectorStoreService.addDocuments(knowledge.getAgentId().toString(), documentsWithMetadata);
@@ -100,7 +101,7 @@ public class AgentKnowledgeResourceManager {
 
 			Map<String, Object> metadata = new HashMap<>();
 			metadata.put(Constant.AGENT_ID, agentId.toString());
-			metadata.put(DocumentMetadataConstant.AGENT_KNOWLEDGE_ID, knowledgeId.toString());
+			metadata.put(DocumentMetadataConstant.DB_AGENT_KNOWLEDGE_ID, knowledgeId.toString());
 
 			agentVectorStoreService.deleteDocumentsByMetedata(agentId.toString(), metadata);
 			log.info("Successfully deleted knowledge from vector store, knowledgeId: {}", knowledgeId);

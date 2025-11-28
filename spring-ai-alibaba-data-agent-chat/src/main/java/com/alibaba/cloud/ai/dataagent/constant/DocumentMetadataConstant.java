@@ -38,7 +38,7 @@ public final class DocumentMetadataConstant {
 	public static final String VECTOR_TYPE = "vectorType";
 
 	// knowledgeId
-	public static final String AGENT_KNOWLEDGE_ID = "agentKnowledgeId";
+	public static final String DB_AGENT_KNOWLEDGE_ID = "agentKnowledgeId";
 
 	// FAQ/DOCUMENT/QA
 	public static final String CONCRETE_AGENT_KNOWLEDGE_TYPE = "concreteAgentKnowledgeType";
@@ -50,7 +50,7 @@ public final class DocumentMetadataConstant {
 	public static final String BUSINESS_TERM = "businessTerm";
 
 	// businessTermId
-	public static final String BUSINESS_TERM_ID = "businessTermId";
+	public static final String DB_BUSINESS_TERM_ID = "businessTermId";
 
 	// isRecall
 	public static final String IS_RECALL = "isRecall";

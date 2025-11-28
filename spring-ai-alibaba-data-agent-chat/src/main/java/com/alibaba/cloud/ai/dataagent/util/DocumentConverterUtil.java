@@ -111,15 +111,9 @@ public class DocumentConverterUtil {
 		Map<String, Object> metadata = new HashMap<>();
 		metadata.put(DocumentMetadataConstant.VECTOR_TYPE, DocumentMetadataConstant.BUSINESS_TERM);
 		metadata.put(Constant.AGENT_ID, businessKnowledge.getAgentId().toString());
-		metadata.put(DocumentMetadataConstant.BUSINESS_TERM_ID, businessKnowledge.getId().toString());
+		metadata.put(DocumentMetadataConstant.DB_BUSINESS_TERM_ID, businessKnowledge.getId().toString());
 
-		String docId = generateFixedBusinessKnowledgeDocId(businessKnowledge.getAgentId().toString(),
-				businessKnowledge.getId());
-		return new Document(docId, content, metadata);
-	}
-
-	public static String generateFixedBusinessKnowledgeDocId(String agentId, Long businessKnowledgeId) {
-		return DocumentMetadataConstant.BUSINESS_TERM + ":" + agentId + ":" + businessKnowledgeId;
+		return new Document(content, metadata);
 	}
 
 	public static Document convertQaFaqKnowledgeToDocument(AgentKnowledge knowledge) {
@@ -129,7 +123,7 @@ public class DocumentConverterUtil {
 		// answer和isRecall经常变更的放到关系数据库
 		metadata.put(Constant.AGENT_ID, knowledge.getAgentId().toString());
 		metadata.put(DocumentMetadataConstant.VECTOR_TYPE, DocumentMetadataConstant.AGENT_KNOWLEDGE);
-		metadata.put(DocumentMetadataConstant.AGENT_KNOWLEDGE_ID, knowledge.getId().toString());
+		metadata.put(DocumentMetadataConstant.DB_AGENT_KNOWLEDGE_ID, knowledge.getId().toString());
 		metadata.put(DocumentMetadataConstant.CONCRETE_AGENT_KNOWLEDGE_TYPE, knowledge.getType().getCode());
 
 		return new Document(content, metadata);
@@ -141,7 +135,8 @@ public class DocumentConverterUtil {
 	 * @param knowledge 知识对象
 	 * @return 添加了元数据的文档列表
 	 */
-	public static List<Document> convertDocumentsWithMetadata(List<Document> documents, AgentKnowledge knowledge) {
+	public static List<Document> convertAgentKnowledgeDocumentsWithMetadata(List<Document> documents,
+			AgentKnowledge knowledge) {
 		List<Document> documentsWithMetadata = new ArrayList<>();
 
 		for (Document doc : documents) {
@@ -149,7 +144,7 @@ public class DocumentConverterUtil {
 			// 创建元数据
 			Map<String, Object> metadata = new HashMap<>(doc.getMetadata());
 			metadata.put(Constant.AGENT_ID, knowledge.getAgentId().toString());
-			metadata.put(DocumentMetadataConstant.AGENT_KNOWLEDGE_ID, knowledge.getId().toString());
+			metadata.put(DocumentMetadataConstant.DB_AGENT_KNOWLEDGE_ID, knowledge.getId().toString());
 			metadata.put(DocumentMetadataConstant.VECTOR_TYPE, DocumentMetadataConstant.AGENT_KNOWLEDGE);
 			metadata.put(DocumentMetadataConstant.CONCRETE_AGENT_KNOWLEDGE_TYPE, knowledge.getType().getCode());
 

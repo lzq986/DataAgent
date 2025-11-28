@@ -116,7 +116,7 @@ public class AgentVectorStoreServiceImpl implements AgentVectorStoreService {
 	}
 
 	@Override
-	public Boolean deleteDocumentsByMetedata(String agentId, Map<String, Object> metadata) throws Exception {
+	public Boolean deleteDocumentsByMetedata(String agentId, Map<String, Object> metadata) {
 		Assert.hasText(agentId, "AgentId cannot be empty.");
 		Assert.notNull(metadata, "Metadata cannot be null.");
 		// 添加agentId元数据过滤条件, 用于删除指定agentId下的所有数据，因为metadata中用户调用可能忘记添加agentId

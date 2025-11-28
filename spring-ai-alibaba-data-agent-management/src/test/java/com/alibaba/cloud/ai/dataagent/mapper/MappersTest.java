@@ -258,9 +258,6 @@ public class MappersTest {
 		int upd = businessKnowledgeMapper.updateById(k);
 		Assertions.assertEquals(1, upd);
 
-		upd = businessKnowledgeMapper.changeRecall(k.getId(), false);
-		Assertions.assertEquals(1, upd);
-
 		int del = businessKnowledgeMapper.deleteById(k.getId());
 		Assertions.assertEquals(1, del);
 		agentMapper.deleteById(agentId);

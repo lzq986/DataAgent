@@ -16,6 +16,7 @@
 
 package com.alibaba.cloud.ai.dataagent.service.business;
 
+import com.alibaba.cloud.ai.dataagent.constant.Constant;
 import com.alibaba.cloud.ai.dataagent.constant.DocumentMetadataConstant;
 import com.alibaba.cloud.ai.dataagent.converter.BusinessKnowledgeConverter;
 import com.alibaba.cloud.ai.dataagent.dto.businessknowledge.CreateBusinessKnowledgeDTO;
@@ -29,14 +30,15 @@ import com.alibaba.cloud.ai.dataagent.vo.BusinessKnowledgeVO;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.document.Document;
-import org.springframework.ai.vectorstore.VectorStore;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.CollectionUtils;
 import org.springframework.util.StringUtils;
 
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @Slf4j
 @Service
@@ -44,8 +46,6 @@ import java.util.List;
 public class BusinessKnowledgeServiceImpl implements BusinessKnowledgeService {
 
 	private final BusinessKnowledgeMapper businessKnowledgeMapper;
-
-	private final VectorStore vectorStore;
 
 	private final AgentVectorStoreService agentVectorStoreService;
 
@@ -99,7 +99,7 @@ public class BusinessKnowledgeServiceImpl implements BusinessKnowledgeService {
 
 		try {
 			Document document = DocumentConverterUtil.convertBusinessKnowledgeToDocument(entity);
-			vectorStore.add(List.of(document));
+			agentVectorStoreService.addDocuments(entity.getAgentId().toString(), List.of(document));
 			entity.setEmbeddingStatus(EmbeddingStatus.COMPLETED);
 			entity.setErrorMsg(null);
 			businessKnowledgeMapper.updateById(entity);
@@ -158,15 +158,12 @@ public class BusinessKnowledgeServiceImpl implements BusinessKnowledgeService {
 	 * 更新向量库中的知识向量
 	 */
 	private void syncToVectorStore(BusinessKnowledge knowledge) {
-		String fixedBusinessKnowledgeDocId = DocumentConverterUtil
-			.generateFixedBusinessKnowledgeDocId(knowledge.getAgentId().toString(), knowledge.getId());
-
 		// 先删除旧的向量数据
-		vectorStore.delete(List.of(fixedBusinessKnowledgeDocId));
+		this.doDelVector(knowledge);
 
 		// 添加新的向量数据
 		Document newDocument = DocumentConverterUtil.convertBusinessKnowledgeToDocument(knowledge);
-		vectorStore.add(List.of(newDocument));
+		agentVectorStoreService.addDocuments(knowledge.getAgentId().toString(), List.of(newDocument));
 
 		log.info("Successfully updated vector store for knowledge id: {}", knowledge.getId());
 	}
@@ -181,15 +178,22 @@ public class BusinessKnowledgeServiceImpl implements BusinessKnowledgeService {
 			return;
 		}
 
-		String documentId = DocumentConverterUtil.generateFixedBusinessKnowledgeDocId(knowledge.getAgentId().toString(),
-				id);
-		vectorStore.delete(List.of(documentId));
+		doDelVector(knowledge);
 
 		if (businessKnowledgeMapper.logicalDelete(id, 1) <= 0) {
 			// 重新添加修复被删除的记录
-			vectorStore.add(List.of(DocumentConverterUtil.convertBusinessKnowledgeToDocument(knowledge)));
+			agentVectorStoreService.addDocuments(knowledge.getAgentId().toString(),
+					List.of(DocumentConverterUtil.convertBusinessKnowledgeToDocument(knowledge)));
 			throw new RuntimeException("Failed to logically delete knowledge from database");
 		}
+	}
+
+	private void doDelVector(BusinessKnowledge knowledge) {
+		Map<String, Object> metadata = new HashMap<>();
+		metadata.put(Constant.AGENT_ID, knowledge.getAgentId().toString());
+		metadata.put(DocumentMetadataConstant.DB_BUSINESS_TERM_ID, knowledge.getId().toString());
+		metadata.put(DocumentMetadataConstant.VECTOR_TYPE, DocumentMetadataConstant.BUSINESS_TERM);
+		agentVectorStoreService.deleteDocumentsByMetedata(knowledge.getAgentId().toString(), metadata);
 	}
 
 	@Override
@@ -224,7 +228,7 @@ public class BusinessKnowledgeServiceImpl implements BusinessKnowledgeService {
 			List<Document> documents = recalledKnowledge.stream()
 				.map(DocumentConverterUtil::convertBusinessKnowledgeToDocument)
 				.toList();
-			vectorStore.add(documents);
+			agentVectorStoreService.addDocuments(agentId, documents);
 		}
 	}
 

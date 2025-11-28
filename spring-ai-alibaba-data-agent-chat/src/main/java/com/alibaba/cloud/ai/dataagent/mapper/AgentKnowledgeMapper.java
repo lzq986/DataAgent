@@ -55,6 +55,7 @@ public interface AgentKnowledgeMapper {
 				<if test="question != null">question = #{question},</if>
 				<if test="isRecall != null">is_recall = #{isRecall},</if>
 				<if test="embeddingStatus != null">embedding_status = #{embeddingStatus},</if>
+				<if test="errorMsg != null">error_msg = #{errorMsg},</if>
 				<if test="sourceFilename != null">source_filename = #{sourceFilename},</if>
 				<if test="filePath != null">file_path = #{filePath},</if>
 				<if test="fileSize != null">file_size = #{fileSize},</if>
