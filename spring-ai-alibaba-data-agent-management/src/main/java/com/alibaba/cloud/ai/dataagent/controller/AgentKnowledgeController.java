@@ -68,7 +68,7 @@ public class AgentKnowledgeController {
 	}
 
 	/**
-	 * Create knowledge without file (application/json)
+	 * Create knowledge,supporting file upload
 	 */
 	@PostMapping("/create")
 	public ApiResponse<AgentKnowledgeVO> createKnowledgeWithoutFile(@Valid CreateKnowledgeDto createKnowledgeDto) {
