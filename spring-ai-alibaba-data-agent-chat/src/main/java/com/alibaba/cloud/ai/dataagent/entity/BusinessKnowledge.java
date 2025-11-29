@@ -16,6 +16,7 @@
 package com.alibaba.cloud.ai.dataagent.entity;
 
 import com.alibaba.cloud.ai.dataagent.enums.EmbeddingStatus;
+import com.fasterxml.jackson.annotation.JsonFormat;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -45,8 +46,10 @@ public class BusinessKnowledge {
 
 	private Long agentId; // Associated agent ID
 
+	@JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "GMT+8")
 	private LocalDateTime createdTime;
 
+	@JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "GMT+8")
 	private LocalDateTime updatedTime;
 
 	// 向量化状态：PENDING待处理，PROCESSING处理中，COMPLETED已完成，FAILED失败

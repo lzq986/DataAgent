@@ -39,25 +39,16 @@ public class BusinessKnowledgeController {
 	private final BusinessKnowledgeService businessKnowledgeService;
 
 	@GetMapping
-	public ApiResponse<List<BusinessKnowledgeVO>> list(
-			@RequestParam(value = "agentId", required = false) String agentIdStr,
+	public ApiResponse<List<BusinessKnowledgeVO>> list(@RequestParam(value = "agentId") String agentIdStr,
 			@RequestParam(value = "keyword", required = false) String keyword) {
 		List<BusinessKnowledgeVO> result;
-		Long agentId = null;
-		try {
-			agentId = Long.parseLong(agentIdStr);
-		}
-		catch (Exception e) {
-			// ignore
-		}
-		if (StringUtils.hasText(keyword) && agentId != null) {
+		Long agentId = Long.parseLong(agentIdStr);
+
+		if (StringUtils.hasText(keyword)) {
 			result = businessKnowledgeService.searchKnowledge(agentId, keyword);
 		}
-		else if (agentId != null) {
-			result = businessKnowledgeService.getKnowledge(agentId);
-		}
 		else {
-			result = businessKnowledgeService.getAllKnowledge();
+			result = businessKnowledgeService.getKnowledge(agentId);
 		}
 		return ApiResponse.success("success list businessKnowledge", result);
 	}
