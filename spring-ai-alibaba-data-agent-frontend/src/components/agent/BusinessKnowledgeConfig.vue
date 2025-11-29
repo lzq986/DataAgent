@@ -64,6 +64,22 @@
       <el-table-column prop="businessTerm" label="业务名词" min-width="120px" />
       <el-table-column prop="description" label="描述" min-width="150px" />
       <el-table-column prop="synonyms" label="同义词" min-width="120px" />
+      <el-table-column label="向量化状态" min-width="120px">
+        <template #default="scope">
+          <el-tag :type="getVectorStatusType(scope.row.embeddingStatus)" round>
+            {{ scope.row.embeddingStatus || '未知' }}
+            <el-tooltip
+              v-if="scope.row.embeddingStatus === 'FAILED' && scope.row.errorMsg"
+              :content="scope.row.errorMsg"
+              placement="top"
+            >
+              <el-icon style="margin-left: 4px">
+                <Warning />
+              </el-icon>
+            </el-tooltip>
+          </el-tag>
+        </template>
+      </el-table-column>
       <el-table-column label="是否召回" min-width="80px">
         <template #default="scope">
           <el-tag :type="scope.row.isRecall === 1 ? 'success' : 'info'" round>
@@ -76,6 +92,17 @@
         <template #default="scope">
           <el-button @click="editKnowledge(scope.row)" size="small" type="primary" round plain>
             编辑
+          </el-button>
+          <el-button
+            v-if="scope.row.embeddingStatus === 'FAILED'"
+            @click="retryEmbedding(scope.row)"
+            size="small"
+            type="info"
+            round
+            plain
+            :loading="retryLoadingMap[scope.row.id]"
+          >
+            重试
           </el-button>
           <el-button
             v-if="scope.row.isRecall === 1"
@@ -134,9 +161,14 @@
     <template #footer>
       <div style="text-align: right">
         <el-button @click="dialogVisible = false">取消</el-button>
-        <el-button type="primary" @click="saveKnowledge" :loading="saveLoading" :disabled="saveLoading">
-        {{ isEdit ? '更新' : '创建' }}
-      </el-button>
+        <el-button
+          type="primary"
+          @click="saveKnowledge"
+          :loading="saveLoading"
+          :disabled="saveLoading"
+        >
+          {{ isEdit ? '更新' : '创建' }}
+        </el-button>
       </div>
     </template>
   </el-dialog>
@@ -144,7 +176,7 @@
 
 <script lang="ts">
   import { defineComponent, ref, onMounted, Ref } from 'vue';
-  import { Plus, Search, Document } from '@element-plus/icons-vue';
+  import { Plus, Search, Document, Warning } from '@element-plus/icons-vue';
   import businessKnowledgeService, {
     BusinessKnowledgeVO,
     CreateBusinessKnowledgeDTO,
@@ -156,6 +188,7 @@
     name: 'AgentKnowledgeConfig',
     components: {
       Search,
+      Warning,
     },
     props: {
       agentId: {
@@ -178,6 +211,7 @@
       const currentEditId: Ref<number | null> = ref(null);
       const refreshLoading: Ref<boolean> = ref(false);
       const saveLoading: Ref<boolean> = ref(false);
+      const retryLoadingMap: Ref<Record<number, boolean>> = ref({});
 
       const openCreateDialog = () => {
         isEdit.value = false;
@@ -242,7 +276,10 @@
         if (!knowledge.id) return;
 
         try {
-          const result = await businessKnowledgeService.recallKnowledge(knowledge.id, isRecall ? 1 : 0);
+          const result = await businessKnowledgeService.recallKnowledge(
+            knowledge.id,
+            isRecall ? 1 : 0,
+          );
           if (result) {
             ElMessage.success(`${isRecall ? '设为召回' : '取消召回'}成功`);
             knowledge.isRecall = isRecall ? 1 : 0;
@@ -331,6 +368,47 @@
         }
       };
 
+      // 重试向量化
+      const retryEmbedding = async (knowledge: BusinessKnowledgeVO) => {
+        if (!knowledge.id) return;
+
+        try {
+          // 设置加载状态为true
+          retryLoadingMap.value[knowledge.id] = true;
+
+          const result = await businessKnowledgeService.retryEmbedding(knowledge.id);
+          if (result) {
+            ElMessage.success('重试向量化成功');
+            // 刷新列表以更新状态
+            await loadBusinessKnowledge();
+          } else {
+            ElMessage.error('重试向量化失败');
+          }
+        } catch (error) {
+          ElMessage.error('重试向量化失败');
+          console.error('Failed to retry vectorization:', error);
+        } finally {
+          // 无论成功还是失败，都将加载状态设置为false
+          retryLoadingMap.value[knowledge.id] = false;
+        }
+      };
+
+      // 获取向量化状态对应的标签类型
+      const getVectorStatusType = (status?: string): string => {
+        switch (status) {
+          case 'COMPLETED':
+            return 'success';
+          case 'FAILED':
+            return 'danger';
+          case 'PENDING':
+            return 'warning';
+          case 'PROCESSING':
+            return 'primary';
+          default:
+            return 'info';
+        }
+      };
+
       onMounted(() => {
         loadBusinessKnowledge();
       });
@@ -346,6 +424,7 @@
         knowledgeForm,
         refreshLoading,
         saveLoading,
+        retryLoadingMap,
         openCreateDialog,
         editKnowledge,
         deleteKnowledge,
@@ -353,6 +432,8 @@
         saveKnowledge,
         handleSearch,
         refreshVectorStore,
+        retryEmbedding,
+        getVectorStatusType,
       };
     },
   });

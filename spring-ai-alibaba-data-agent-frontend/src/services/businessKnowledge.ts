@@ -60,7 +60,9 @@ class BusinessKnowledgeService {
       if (keyword) {
         params.keyword = keyword;
       }
-      const response = await axios.get<ApiResponse<BusinessKnowledgeVO[]>>(API_BASE_URL, { params });
+      const response = await axios.get<ApiResponse<BusinessKnowledgeVO[]>>(API_BASE_URL, {
+        params,
+      });
       return response.data.data || [];
     } catch (error) {
       console.error('Failed to fetch business knowledge list:', error);
@@ -98,9 +100,15 @@ class BusinessKnowledgeService {
    * @param id 业务知识 ID
    * @param knowledge 业务知识 DTO 对象
    */
-  async update(id: number, knowledge: UpdateBusinessKnowledgeDTO): Promise<BusinessKnowledgeVO | null> {
+  async update(
+    id: number,
+    knowledge: UpdateBusinessKnowledgeDTO,
+  ): Promise<BusinessKnowledgeVO | null> {
     try {
-      const response = await axios.put<ApiResponse<BusinessKnowledgeVO>>(`${API_BASE_URL}/${id}`, knowledge);
+      const response = await axios.put<ApiResponse<BusinessKnowledgeVO>>(
+        `${API_BASE_URL}/${id}`,
+        knowledge,
+      );
       return response.data.data || null;
     } catch (error) {
       if (axios.isAxiosError(error) && error.response?.status === 404) {
@@ -139,13 +147,28 @@ class BusinessKnowledgeService {
   }
 
   /**
+   * 重试业务知识向量化
+   * @param id 业务知识 ID
+   */
+  async retryEmbedding(id: number): Promise<boolean> {
+    const response = await axios.post<ApiResponse<boolean>>(
+      `${API_BASE_URL}/retry-embedding/${id}`,
+    );
+    return response.data.success;
+  }
+
+  /**
    * 刷新所有业务知识到向量存储
    * @param agentId Agent ID
    */
   async refreshAllKnowledgeToVectorStore(agentId: string): Promise<boolean> {
-    const response = await axios.post<ApiResponse<boolean>>(`${API_BASE_URL}/refresh-vector-store`, null, {
-      params: { agentId },
-    });
+    const response = await axios.post<ApiResponse<boolean>>(
+      `${API_BASE_URL}/refresh-vector-store`,
+      null,
+      {
+        params: { agentId },
+      },
+    );
     return response.data.success;
   }
 }
