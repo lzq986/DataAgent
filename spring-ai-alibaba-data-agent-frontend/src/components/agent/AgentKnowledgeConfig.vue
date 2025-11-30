@@ -174,7 +174,10 @@
                 >
                   <i class="fas fa-exclamation-circle"></i>
                   失败
-                  <button @click="handleRetry(item)" class="ml-1 text-red-600 hover:text-red-800 underline">
+                  <button
+                    @click="handleRetry(item)"
+                    class="ml-1 text-red-600 hover:text-red-800 underline"
+                  >
                     [重试]
                   </button>
                 </span>
@@ -292,40 +295,40 @@
 
         <!-- 文件上传区域 (默认显示) -->
         <div v-if="knowledgeForm.type === 'document'" id="section-document">
-           <!-- 编辑模式下不显示文件上传 -->
-           <div v-if="!isEdit">
-              <label class="block text-sm font-medium text-gray-700 mb-1">上传文件</label>
-              <div
-                class="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-md"
-              >
-                <div class="space-y-1 text-center">
-                  <i class="fas fa-cloud-upload-alt text-4xl text-gray-400"></i>
-                  <div class="flex text-sm text-gray-600">
-                    <label
-                      for="file-upload"
-                      class="relative cursor-pointer bg-white rounded-md font-medium text-[#5f70e1] hover:text-[#4c63d2] focus-within:outline-none"
-                    >
-                      <span>选择文件</span>
-                      <input
-                        id="file-upload"
-                        name="file-upload"
-                        type="file"
-                        class="sr-only"
-                        @change="handleFileChange"
-                      />
-                    </label>
-                    <p class="pl-1">或拖拽到此处</p>
-                  </div>
-                  <p class="text-xs text-gray-500">支持 PDF, DOCX, TXT, MD 等</p>
-                  <p v-if="fileList.length > 0" class="text-xs text-[#5f70e1] mt-2">
-                    已选择: {{ fileList[0].name }}
-                  </p>
+          <!-- 编辑模式下不显示文件上传 -->
+          <div v-if="!isEdit">
+            <label class="block text-sm font-medium text-gray-700 mb-1">上传文件</label>
+            <div
+              class="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-md"
+            >
+              <div class="space-y-1 text-center">
+                <i class="fas fa-cloud-upload-alt text-4xl text-gray-400"></i>
+                <div class="flex text-sm text-gray-600">
+                  <label
+                    for="file-upload"
+                    class="relative cursor-pointer bg-white rounded-md font-medium text-[#5f70e1] hover:text-[#4c63d2] focus-within:outline-none"
+                  >
+                    <span>选择文件</span>
+                    <input
+                      id="file-upload"
+                      name="file-upload"
+                      type="file"
+                      class="sr-only"
+                      @change="handleFileChange"
+                    />
+                  </label>
+                  <p class="pl-1">或拖拽到此处</p>
                 </div>
+                <p class="text-xs text-gray-500">支持 PDF, DOCX, TXT, MD 等</p>
+                <p v-if="fileList.length > 0" class="text-xs text-[#5f70e1] mt-2">
+                  已选择: {{ fileList[0].name }}
+                </p>
               </div>
-           </div>
-           <div v-else class="text-sm text-gray-500 italic">
-               文档类型知识不支持修改文件内容，如需修改请删除后重新创建。
-           </div>
+            </div>
+          </div>
+          <div v-else class="text-sm text-gray-500 italic">
+            文档类型知识不支持修改文件内容，如需修改请删除后重新创建。
+          </div>
         </div>
 
         <!-- Q&A / FAQ 输入区域 (默认隐藏) -->
@@ -456,7 +459,9 @@
           const queryDTO = {
             ...queryParams,
             type: queryParams.type ? queryParams.type.toUpperCase() : '',
-            embeddingStatus: queryParams.embeddingStatus ? queryParams.embeddingStatus.toUpperCase() : ''
+            embeddingStatus: queryParams.embeddingStatus
+              ? queryParams.embeddingStatus.toUpperCase()
+              : '',
           };
           const result = await agentKnowledgeService.queryByPage(queryDTO);
           if (result.success) {
@@ -510,14 +515,14 @@
         // 复制对象并将 type 转换为小写以匹配表单选项
         knowledgeForm.value = {
           ...knowledge,
-          type: knowledge.type?.toLowerCase()
+          type: knowledge.type?.toLowerCase(),
         };
 
         // 如果是 QA/FAQ，需要把 content 拆分回 question 和 answer (如果 content 是组合的)
         // 这里假设后端返回的 VO 已经有了 question 和 content (作为 answer)
         if (knowledge.type?.toLowerCase() === 'qa' || knowledge.type?.toLowerCase() === 'faq') {
-             knowledgeForm.value.answer = knowledge.content;
-             // question 已经在 knowledge 对象中了
+          knowledgeForm.value.answer = knowledge.content;
+          // question 已经在 knowledge 对象中了
         }
 
         dialogVisible.value = true;
@@ -537,7 +542,10 @@
         })
           .then(async () => {
             try {
-              const result = await agentKnowledgeService.updateRecallStatus(knowledge.id!, newStatus);
+              const result = await agentKnowledgeService.updateRecallStatus(
+                knowledge.id!,
+                newStatus,
+              );
               if (result) {
                 // 更新本地列表中的状态
                 knowledge.isRecall = newStatus;
@@ -559,16 +567,16 @@
       const handleRetry = async (knowledge: AgentKnowledge) => {
         if (!knowledge.id) return;
         try {
-            const success = await agentKnowledgeService.retryEmbedding(knowledge.id);
-            if (success) {
-                ElMessage.success('重试请求已发送');
-                // 刷新列表
-                loadKnowledgeList();
-            } else {
-                ElMessage.error('重试失败');
-            }
-        } catch (error) {
+          const success = await agentKnowledgeService.retryEmbedding(knowledge.id);
+          if (success) {
+            ElMessage.success('重试请求已发送');
+            // 刷新列表
+            loadKnowledgeList();
+          } else {
             ElMessage.error('重试失败');
+          }
+        } catch (error) {
+          ElMessage.error('重试失败');
         }
       };
 
@@ -653,10 +661,7 @@
               ...knowledgeForm.value,
               type: knowledgeForm.value.type?.toUpperCase(),
             };
-            const result = await agentKnowledgeService.update(
-              currentEditId.value,
-              updateData,
-            );
+            const result = await agentKnowledgeService.update(currentEditId.value, updateData);
             // update 返回的是对象或null，只要不是null就是成功
             if (result) {
               ElMessage.success('更新成功');

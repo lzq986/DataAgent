@@ -148,7 +148,7 @@ class AgentKnowledgeService {
   async updateRecallStatus(id: number, recalled: number): Promise<AgentKnowledge | null> {
     try {
       const response = await axios.put<{ success: boolean; data: AgentKnowledge }>(
-        `${API_BASE_URL}/knowledge/${id}/recall-status/${recalled}`
+        `${API_BASE_URL}/knowledge/${id}/recall-status/${recalled}`,
       );
       return response.data.data;
     } catch (error) {
@@ -177,7 +177,9 @@ class AgentKnowledgeService {
    */
   async retryEmbedding(id: number): Promise<boolean> {
     try {
-      const response = await axios.post<{ success: boolean }>(`${API_BASE_URL}/retry-embedding/${id}`);
+      const response = await axios.post<{ success: boolean }>(
+        `${API_BASE_URL}/retry-embedding/${id}`,
+      );
       return response.data.success;
     } catch (error) {
       console.error('Failed to retry embedding:', error);
