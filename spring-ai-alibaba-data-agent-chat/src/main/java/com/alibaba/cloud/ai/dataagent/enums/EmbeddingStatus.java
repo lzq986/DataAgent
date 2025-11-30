@@ -30,7 +30,7 @@ public enum EmbeddingStatus {
 
 	public static EmbeddingStatus fromValue(String value) {
 		for (EmbeddingStatus status : EmbeddingStatus.values()) {
-			if (status.value.equals(value)) {
+			if (status.value.equalsIgnoreCase(value)) {
 				return status;
 			}
 		}

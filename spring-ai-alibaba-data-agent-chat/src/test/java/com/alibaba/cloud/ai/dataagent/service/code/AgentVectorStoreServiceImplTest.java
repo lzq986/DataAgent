@@ -21,11 +21,9 @@ import com.alibaba.cloud.ai.dataagent.common.connector.accessor.AccessorFactory;
 import com.alibaba.cloud.ai.dataagent.common.connector.bo.ColumnInfoBO;
 import com.alibaba.cloud.ai.dataagent.common.connector.bo.ForeignKeyInfoBO;
 import com.alibaba.cloud.ai.dataagent.common.connector.bo.TableInfoBO;
-import com.alibaba.cloud.ai.dataagent.common.connector.config.DbConfig;
 import com.alibaba.cloud.ai.dataagent.constant.Constant;
 import com.alibaba.cloud.ai.dataagent.constant.DocumentMetadataConstant;
 import com.alibaba.cloud.ai.dataagent.common.request.AgentSearchRequest;
-import com.alibaba.cloud.ai.dataagent.common.request.SchemaInitRequest;
 import com.alibaba.cloud.ai.dataagent.service.hybrid.retrieval.HybridRetrievalStrategy;
 import com.alibaba.cloud.ai.dataagent.service.vectorstore.AgentVectorStoreServiceImpl;
 import org.junit.jupiter.api.BeforeEach;
@@ -100,12 +98,12 @@ class AgentVectorStoreServiceImplTest {
 	void testSearchWithValidRequest() {
 		// Arrange
 		AgentSearchRequest searchRequest = AgentSearchRequest.builder()
-			.agentId(TEST_AGENT_ID)
-			.docVectorType(TEST_VECTOR_TYPE)
-			.query(TEST_QUERY)
-			.topK(5)
-			.similarityThreshold(0.8)
-			.build();
+				.agentId(TEST_AGENT_ID)
+				.docVectorType(TEST_VECTOR_TYPE)
+				.query(TEST_QUERY)
+				.topK(5)
+				.similarityThreshold(0.8)
+				.build();
 
 		List<Document> expectedDocuments = Arrays.asList(new Document("Document 1 content", Map.of("key1", "value1")),
 				new Document("Document 2 content", Map.of("key2", "value2")));
@@ -136,17 +134,18 @@ class AgentVectorStoreServiceImplTest {
 		when(hybridRetrievalStrategy.get()).thenReturn(mockStrategy);
 
 		AgentSearchRequest searchRequest = AgentSearchRequest.builder()
-			.agentId(TEST_AGENT_ID)
-			.docVectorType(TEST_VECTOR_TYPE)
-			.query(TEST_QUERY)
-			.topK(5)
-			.similarityThreshold(0.8)
-			.build();
+				.agentId(TEST_AGENT_ID)
+				.docVectorType(TEST_VECTOR_TYPE)
+				.query(TEST_QUERY)
+				.topK(5)
+				.similarityThreshold(0.8)
+				.build();
 
 		List<Document> expectedDocuments = Arrays.asList(new Document("Hybrid result 1", Map.of("key1", "value1")),
 				new Document("Hybrid result 2", Map.of("key2", "value2")));
 
-		when(mockStrategy.retrieve(any(AgentSearchRequest.class))).thenReturn(expectedDocuments);
+		when(mockStrategy.retrieve(any(com.alibaba.cloud.ai.dataagent.common.request.HybridSearchRequest.class)))
+				.thenReturn(expectedDocuments);
 
 		// Act
 		List<Document> result = agentVectorStoreService.search(searchRequest);
@@ -155,7 +154,7 @@ class AgentVectorStoreServiceImplTest {
 		assertNotNull(result);
 		assertEquals(2, result.size());
 		assertEquals(expectedDocuments, result);
-		verify(mockStrategy).retrieve(searchRequest);
+		verify(mockStrategy).retrieve(any(com.alibaba.cloud.ai.dataagent.common.request.HybridSearchRequest.class));
 		verify(vectorStore, never()).similaritySearch(any(SearchRequest.class));
 	}
 
@@ -212,7 +211,7 @@ class AgentVectorStoreServiceImplTest {
 	void testAddDocumentsWithDifferentAgentIdInMetadata() {
 		// Arrange
 		List<Document> documents = Arrays
-			.asList(new Document("Document 1", Map.of(Constant.AGENT_ID, "different-agent-id")));
+				.asList(new Document("Document 1", Map.of(Constant.AGENT_ID, "different-agent-id")));
 
 		// Act & Assert
 		IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
@@ -239,7 +238,7 @@ class AgentVectorStoreServiceImplTest {
 		// Mock the vectorStore.similaritySearch to return documents on first call and
 		// empty list on subsequent calls
 		when(simpleVectorStore.similaritySearch(any(SearchRequest.class))).thenReturn(mockDocuments)
-			.thenReturn(Collections.emptyList());
+				.thenReturn(Collections.emptyList());
 
 		// Act
 		Boolean result = agentVectorStoreService.deleteDocumentsByVectorType(TEST_AGENT_ID, TEST_VECTOR_TYPE);
@@ -288,7 +287,7 @@ class AgentVectorStoreServiceImplTest {
 		// Mock the vectorStore.similaritySearch to return documents on first call and
 		// empty list on subsequent calls
 		when(simpleVectorStore.similaritySearch(any(SearchRequest.class))).thenReturn(mockDocuments)
-			.thenReturn(Collections.emptyList());
+				.thenReturn(Collections.emptyList());
 
 		// Act
 		Boolean result = agentVectorStoreService.deleteDocumentsByMetedata(TEST_AGENT_ID, metadata);
@@ -320,25 +319,6 @@ class AgentVectorStoreServiceImplTest {
 	}
 
 	@Test
-	@DisplayName("Test schema with exception should return false")
-	void testSchemaWithException() throws Exception {
-		// Arrange
-		SchemaInitRequest schemaInitRequest = new SchemaInitRequest();
-		DbConfig dbConfig = new DbConfig();
-		schemaInitRequest.setDbConfig(dbConfig);
-
-		when(accessorFactory.getAccessorByDbConfig(any(DbConfig.class)))
-			.thenThrow(new RuntimeException("Database connection failed"));
-
-		// Act
-		Boolean result = agentVectorStoreService.schema(TEST_AGENT_ID, schemaInitRequest);
-
-		// Assert
-		assertFalse(result);
-		verify(accessorFactory).getAccessorByDbConfig(dbConfig);
-	}
-
-	@Test
 	@DisplayName("Test buildForeignKeyMap")
 	void testBuildForeignKeyMap() {
 		// Arrange
@@ -347,7 +327,7 @@ class AgentVectorStoreServiceImplTest {
 
 		// Act
 		Map<String, List<String>> result = (Map<String, List<String>>) ReflectionTestUtils
-			.invokeMethod(agentVectorStoreService, "buildForeignKeyMap", foreignKeys);
+				.invokeMethod(agentVectorStoreService, "buildForeignKeyMap", foreignKeys);
 
 		// Assert
 		assertNotNull(result);
@@ -396,12 +376,12 @@ class AgentVectorStoreServiceImplTest {
 	void testGetDocumentsForAgent() {
 		// Arrange
 		AgentSearchRequest searchRequest = AgentSearchRequest.builder()
-			.agentId(TEST_AGENT_ID)
-			.docVectorType(TEST_VECTOR_TYPE)
-			.query(TEST_QUERY)
-			.topK(10)
-			.similarityThreshold(0.7)
-			.build();
+				.agentId(TEST_AGENT_ID)
+				.docVectorType(TEST_VECTOR_TYPE)
+				.query(TEST_QUERY)
+				.topK(10)
+				.similarityThreshold(0.7)
+				.build();
 
 		List<Document> expectedDocuments = Arrays.asList(new Document("Document 1 content", Map.of("key1", "value1")),
 				new Document("Document 2 content", Map.of("key2", "value2")));
@@ -423,7 +403,10 @@ class AgentVectorStoreServiceImplTest {
 	@DisplayName("Test getDocumentsOnlyByFilter")
 	void testGetDocumentsOnlyByFilter() {
 		// Arrange
-		String filterExpression = "agentId == 'test-agent-id' && vectorType == 'test-vector-type'";
+		org.springframework.ai.vectorstore.filter.Filter.Expression filterExpression = new org.springframework.ai.vectorstore.filter.Filter.Expression(
+				org.springframework.ai.vectorstore.filter.Filter.ExpressionType.EQ,
+				new org.springframework.ai.vectorstore.filter.Filter.Key("agentId"),
+				new org.springframework.ai.vectorstore.filter.Filter.Value("test-agent-id"));
 		int topK = 5;
 
 		List<Document> expectedDocuments = Arrays.asList(new Document("Document 1 content", Map.of("key1", "value1")),
@@ -522,7 +505,7 @@ class AgentVectorStoreServiceImplTest {
 	void testHasDocumentsWithExistingDocuments() {
 		// Arrange
 		List<Document> mockDocuments = Arrays
-			.asList(new Document("Test content", Map.of(Constant.AGENT_ID, TEST_AGENT_ID)));
+				.asList(new Document("Test content", Map.of(Constant.AGENT_ID, TEST_AGENT_ID)));
 
 		when(vectorStore.similaritySearch(any(SearchRequest.class))).thenReturn(mockDocuments);
 

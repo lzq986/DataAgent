@@ -46,22 +46,24 @@ public class AgentKnowledgeController {
 	private final AgentKnowledgeService agentKnowledgeService;
 
 	private final FileStorageService fileStorageService;
-
 	/**
 	 * Query knowledge details by ID
 	 */
 	@GetMapping("/{id}")
-	public ApiResponse<AgentKnowledge> getKnowledgeById(@PathVariable("id") Integer id) {
+	public ApiResponse<AgentKnowledgeVO> getKnowledgeById(@PathVariable("id") Integer id) {
 		try {
 			AgentKnowledge knowledge = agentKnowledgeService.getKnowledgeById(id);
 			if (knowledge != null) {
-				return ApiResponse.success("查询成功", knowledge);
-			}
-			else {
+				AgentKnowledgeVO vo = new AgentKnowledgeVO();
+				org.springframework.beans.BeanUtils.copyProperties(knowledge, vo);
+				if (knowledge.getType() != null) {
+					vo.setType(knowledge.getType().name());
+				}
+				return ApiResponse.success("查询成功", vo);
+			} else {
 				return ApiResponse.error("知识不存在");
 			}
-		}
-		catch (Exception e) {
+		} catch (Exception e) {
 			log.error("查询知识详情失败：{}", e.getMessage());
 			return ApiResponse.error("查询知识详情失败：" + e.getMessage());
 		}
@@ -70,8 +72,18 @@ public class AgentKnowledgeController {
 	/**
 	 * Create knowledge,supporting file upload
 	 */
-	@PostMapping("/create")
-	public ApiResponse<AgentKnowledgeVO> createKnowledgeWithoutFile(@Valid CreateKnowledgeDto createKnowledgeDto) {
+	@PostMapping(value = "/create", consumes = "application/json")
+	public ApiResponse<AgentKnowledgeVO> createKnowledgeJson(
+			@Valid @RequestBody CreateKnowledgeDto createKnowledgeDto) {
+		return doCreateKnowledge(createKnowledgeDto);
+	}
+
+	@PostMapping(value = "/create", consumes = "multipart/form-data")
+	public ApiResponse<AgentKnowledgeVO> createKnowledgeForm(@Valid CreateKnowledgeDto createKnowledgeDto) {
+		return doCreateKnowledge(createKnowledgeDto);
+	}
+
+	private ApiResponse<AgentKnowledgeVO> doCreateKnowledge(CreateKnowledgeDto createKnowledgeDto) {
 		AgentKnowledgeVO knowledge = agentKnowledgeService.createKnowledge(createKnowledgeDto);
 		return ApiResponse.success("创建知识成功，后台向量存储开始更新，请耐心等待...", knowledge);
 	}
@@ -107,8 +119,7 @@ public class AgentKnowledgeController {
 			PageResult<AgentKnowledgeVO> pageResult = agentKnowledgeService.queryByConditionsWithPage(queryDTO);
 			return PageResponse.success(pageResult.getData(), pageResult.getTotal(), pageResult.getPageNum(),
 					pageResult.getPageSize(), pageResult.getTotalPages());
-		}
-		catch (Exception e) {
+		} catch (Exception e) {
 			log.error("分页查询知识列表失败：{}", e.getMessage());
 			return PageResponse.pageError("分页查询失败：" + e.getMessage());
 		}

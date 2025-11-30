@@ -84,20 +84,6 @@
               </select>
             </div>
 
-            <!-- 筛选项 2 -->
-            <div>
-              <label class="block text-xs font-medium text-gray-500 mb-1">数据来源</label>
-              <select
-                v-model="sourceFilter"
-                class="custom-select w-full border border-gray-300 rounded-md py-1.5 px-3 text-sm focus:ring-1 focus:ring-[#5f70e1] outline-none bg-white text-gray-800"
-                @change="handleSearch"
-              >
-                <option value="">全部来源</option>
-                <option value="upload">文件上传</option>
-                <option value="input">手动输入</option>
-              </select>
-            </div>
-
             <!-- 筛选项 3 -->
             <div>
               <label class="block text-xs font-medium text-gray-500 mb-1">处理状态</label>
@@ -135,8 +121,6 @@
             <tr>
               <th class="px-5 py-3">标题</th>
               <th class="px-5 py-3 whitespace-nowrap">类型</th>
-              <!-- 防止窄屏换行 -->
-              <th class="px-5 py-3 whitespace-nowrap">来源</th>
               <th class="px-5 py-3 whitespace-nowrap">状态</th>
               <th class="px-5 py-3 whitespace-nowrap">召回状态</th>
               <th class="px-5 py-3 whitespace-nowrap">操作</th>
@@ -144,7 +128,7 @@
           </thead>
           <tbody v-if="loading">
             <tr>
-              <td colspan="6" class="px-5 py-8 text-center text-gray-400">
+              <td colspan="5" class="px-5 py-8 text-center text-gray-400">
                 <i class="fas fa-spinner fa-spin mr-2"></i>
                 加载中...
               </td>
@@ -152,7 +136,7 @@
           </tbody>
           <tbody v-else-if="knowledgeList.length === 0">
             <tr>
-              <td colspan="6" class="px-5 py-8 text-center text-gray-400">暂无数据</td>
+              <td colspan="5" class="px-5 py-8 text-center text-gray-400">暂无数据</td>
             </tr>
           </tbody>
           <tbody v-else>
@@ -165,37 +149,37 @@
                 {{ item.title }}
               </td>
               <td class="px-5 py-4">
-                <span v-if="item.type === 'document'">文档</span>
-                <span v-else-if="item.type === 'qa'">问答对</span>
-                <span v-else-if="item.type === 'faq'">常见问题</span>
+                <span v-if="item.type?.toLowerCase() === 'document'">文档</span>
+                <span v-else-if="item.type?.toLowerCase() === 'qa'">问答对</span>
+                <span v-else-if="item.type?.toLowerCase() === 'faq'">常见问题</span>
                 <span v-else>{{ item.type }}</span>
               </td>
               <td class="px-5 py-4">
-                <span v-if="item.sourceUrl">{{ item.sourceUrl }}</span>
-                <span v-else-if="item.type === 'document'">文件上传</span>
-                <span v-else>手动输入</span>
-              </td>
-              <td class="px-5 py-4">
                 <span
-                  v-if="item.embeddingStatus === 'completed'"
+                  v-if="item.embeddingStatus?.toLowerCase() === 'completed'"
                   class="bg-green-100 text-green-800 text-xs font-medium px-2 py-0.5 rounded-full"
                 >
                   已就绪
                 </span>
                 <span
-                  v-else-if="item.embeddingStatus === 'processing'"
+                  v-else-if="item.embeddingStatus?.toLowerCase() === 'processing'"
                   class="bg-blue-100 text-blue-800 text-xs font-medium px-2 py-0.5 rounded-full"
                 >
                   处理中
                 </span>
                 <span
-                  v-else-if="item.embeddingStatus === 'failed'"
-                  class="bg-red-100 text-red-800 text-xs font-medium px-2 py-0.5 rounded-full"
+                  v-else-if="item.embeddingStatus?.toLowerCase() === 'failed'"
+                  class="bg-red-100 text-red-800 text-xs font-medium px-2 py-0.5 rounded-full flex items-center gap-1"
+                  :title="item.errorMsg"
                 >
+                  <i class="fas fa-exclamation-circle"></i>
                   失败
+                  <button @click="handleRetry(item)" class="ml-1 text-red-600 hover:text-red-800 underline">
+                    [重试]
+                  </button>
                 </span>
                 <span
-                  v-else-if="item.embeddingStatus === 'pending'"
+                  v-else-if="item.embeddingStatus?.toLowerCase() === 'pending'"
                   class="bg-gray-100 text-gray-800 text-xs font-medium px-2 py-0.5 rounded-full"
                 >
                   待处理
@@ -209,7 +193,7 @@
               </td>
               <td class="px-5 py-4">
                 <span
-                  v-if="item.status === 'active'"
+                  v-if="item.isRecall === 1"
                   class="text-green-600 text-xs font-medium flex items-center"
                 >
                   <i class="fas fa-check-circle mr-1"></i>
@@ -223,7 +207,7 @@
               <td class="px-5 py-4 text-[#5f70e1] cursor-pointer hover:underline space-x-2">
                 <button @click="editKnowledge(item)">管理</button>
                 <button
-                  v-if="item.status === 'active'"
+                  v-if="item.isRecall === 1"
                   @click="toggleStatus(item)"
                   class="text-red-500 hover:text-red-700"
                 >
@@ -283,6 +267,7 @@
             v-model="knowledgeForm.type"
             class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-[#5f70e1] focus:border-[#5f70e1] sm:text-sm rounded-md border text-gray-800"
             @change="handleTypeChange"
+            :disabled="isEdit"
           >
             <option value="document">文档 (文件上传)</option>
             <option value="qa">问答对 (Q&A)</option>
@@ -307,34 +292,40 @@
 
         <!-- 文件上传区域 (默认显示) -->
         <div v-if="knowledgeForm.type === 'document'" id="section-document">
-          <label class="block text-sm font-medium text-gray-700 mb-1">上传文件</label>
-          <div
-            class="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-md"
-          >
-            <div class="space-y-1 text-center">
-              <i class="fas fa-cloud-upload-alt text-4xl text-gray-400"></i>
-              <div class="flex text-sm text-gray-600">
-                <label
-                  for="file-upload"
-                  class="relative cursor-pointer bg-white rounded-md font-medium text-[#5f70e1] hover:text-[#4c63d2] focus-within:outline-none"
-                >
-                  <span>选择文件</span>
-                  <input
-                    id="file-upload"
-                    name="file-upload"
-                    type="file"
-                    class="sr-only"
-                    @change="handleFileChange"
-                  />
-                </label>
-                <p class="pl-1">或拖拽到此处</p>
+           <!-- 编辑模式下不显示文件上传 -->
+           <div v-if="!isEdit">
+              <label class="block text-sm font-medium text-gray-700 mb-1">上传文件</label>
+              <div
+                class="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-md"
+              >
+                <div class="space-y-1 text-center">
+                  <i class="fas fa-cloud-upload-alt text-4xl text-gray-400"></i>
+                  <div class="flex text-sm text-gray-600">
+                    <label
+                      for="file-upload"
+                      class="relative cursor-pointer bg-white rounded-md font-medium text-[#5f70e1] hover:text-[#4c63d2] focus-within:outline-none"
+                    >
+                      <span>选择文件</span>
+                      <input
+                        id="file-upload"
+                        name="file-upload"
+                        type="file"
+                        class="sr-only"
+                        @change="handleFileChange"
+                      />
+                    </label>
+                    <p class="pl-1">或拖拽到此处</p>
+                  </div>
+                  <p class="text-xs text-gray-500">支持 PDF, DOCX, TXT, MD 等</p>
+                  <p v-if="fileList.length > 0" class="text-xs text-[#5f70e1] mt-2">
+                    已选择: {{ fileList[0].name }}
+                  </p>
+                </div>
               </div>
-              <p class="text-xs text-gray-500">支持 PDF, DOCX, TXT, MD 等</p>
-              <p v-if="fileList.length > 0" class="text-xs text-[#5f70e1] mt-2">
-                已选择: {{ fileList[0].name }}
-              </p>
-            </div>
-          </div>
+           </div>
+           <div v-else class="text-sm text-gray-500 italic">
+               文档类型知识不支持修改文件内容，如需修改请删除后重新创建。
+           </div>
         </div>
 
         <!-- Q&A / FAQ 输入区域 (默认隐藏) -->
@@ -419,14 +410,12 @@
       const currentEditId: Ref<number | null> = ref(null);
       const fileList: Ref<File[]> = ref([]);
       const filterVisible: Ref<boolean> = ref(false);
-      const sourceFilter: Ref<string> = ref('');
 
       // 查询参数
       const queryParams = reactive<AgentKnowledgeQueryDTO>({
         agentId: props.agentId,
         title: '',
         type: '',
-        sourceUrl: '',
         embeddingStatus: '',
         pageNum: 1,
         pageSize: 10,
@@ -442,10 +431,7 @@
         title: '',
         content: '',
         type: 'document',
-        category: '',
-        tags: '',
-        status: 'active',
-        sourceUrl: '',
+        isRecall: 1,
         question: '',
         answer: '',
       } as AgentKnowledge & { question?: string; answer?: string });
@@ -459,8 +445,6 @@
       const clearFilters = () => {
         queryParams.type = '';
         queryParams.embeddingStatus = '';
-        queryParams.sourceUrl = '';
-        sourceFilter.value = '';
         handleSearch();
       };
 
@@ -468,7 +452,13 @@
       const loadKnowledgeList = async () => {
         loading.value = true;
         try {
-          const result = await agentKnowledgeService.queryByPage(queryParams);
+          // 将查询参数中的 type 和 embeddingStatus 转换为大写
+          const queryDTO = {
+            ...queryParams,
+            type: queryParams.type ? queryParams.type.toUpperCase() : '',
+            embeddingStatus: queryParams.embeddingStatus ? queryParams.embeddingStatus.toUpperCase() : ''
+          };
+          const result = await agentKnowledgeService.queryByPage(queryDTO);
           if (result.success) {
             knowledgeList.value = result.data;
             total.value = result.total;
@@ -504,6 +494,7 @@
       const openCreateDialog = () => {
         isEdit.value = false;
         dialogVisible.value = true;
+        resetForm();
       };
 
       // 关闭对话框
@@ -516,15 +507,28 @@
       const editKnowledge = (knowledge: AgentKnowledge) => {
         isEdit.value = true;
         currentEditId.value = knowledge.id || null;
-        knowledgeForm.value = { ...knowledge };
+        // 复制对象并将 type 转换为小写以匹配表单选项
+        knowledgeForm.value = {
+          ...knowledge,
+          type: knowledge.type?.toLowerCase()
+        };
+
+        // 如果是 QA/FAQ，需要把 content 拆分回 question 和 answer (如果 content 是组合的)
+        // 这里假设后端返回的 VO 已经有了 question 和 content (作为 answer)
+        if (knowledge.type?.toLowerCase() === 'qa' || knowledge.type?.toLowerCase() === 'faq') {
+             knowledgeForm.value.answer = knowledge.content;
+             // question 已经在 knowledge 对象中了
+        }
+
         dialogVisible.value = true;
       };
 
       // 切换状态（召回/取消召回）
       const toggleStatus = (knowledge: AgentKnowledge) => {
         if (!knowledge.id) return;
-        const newStatus = knowledge.status === 'active' ? 'inactive' : 'active';
-        const actionName = newStatus === 'active' ? '召回' : '取消召回';
+        // 当前是1则改为0，当前是0则改为1
+        const newStatus = knowledge.isRecall === 1 ? 0 : 1;
+        const actionName = newStatus === 1 ? '召回' : '取消召回';
 
         ElMessageBox.confirm(`确定要${actionName}知识 "${knowledge.title}" 吗？`, '提示', {
           confirmButtonText: '确定',
@@ -533,12 +537,10 @@
         })
           .then(async () => {
             try {
-              const result = await agentKnowledgeService.update(knowledge.id!, {
-                status: newStatus,
-              });
+              const result = await agentKnowledgeService.updateRecallStatus(knowledge.id!, newStatus);
               if (result) {
                 // 更新本地列表中的状态
-                knowledge.status = newStatus;
+                knowledge.isRecall = newStatus;
                 ElMessage.success(`${actionName}成功`);
               } else {
                 ElMessage.error(`${actionName}失败`);
@@ -551,6 +553,23 @@
           .catch(() => {
             // 取消操作
           });
+      };
+
+      // 重试向量化
+      const handleRetry = async (knowledge: AgentKnowledge) => {
+        if (!knowledge.id) return;
+        try {
+            const success = await agentKnowledgeService.retryEmbedding(knowledge.id);
+            if (success) {
+                ElMessage.success('重试请求已发送');
+                // 刷新列表
+                loadKnowledgeList();
+            } else {
+                ElMessage.error('重试失败');
+            }
+        } catch (error) {
+            ElMessage.error('重试失败');
+        }
       };
 
       // 删除知识
@@ -608,6 +627,7 @@
 
         // 根据类型验证不同字段
         if (knowledgeForm.value.type === 'document') {
+          // 编辑模式下不允许修改文件，所以不需要验证文件
           if (!isEdit.value && !knowledgeForm.value.file && fileList.value.length === 0) {
             ElMessage.warning('请上传文件');
             return;
@@ -621,17 +641,23 @@
             ElMessage.warning('请输入答案');
             return;
           }
-          // 将问题和答案组合成 content
-          knowledgeForm.value.content = `问题：${knowledgeForm.value.question}\n\n答案：${knowledgeForm.value.answer}`;
+          // 将答案赋值给 content
+          knowledgeForm.value.content = knowledgeForm.value.answer;
         }
 
         saveLoading.value = true;
         try {
           if (isEdit.value && currentEditId.value) {
+            // 更新时需要将 type 转换为大写
+            const updateData = {
+              ...knowledgeForm.value,
+              type: knowledgeForm.value.type?.toUpperCase(),
+            };
             const result = await agentKnowledgeService.update(
               currentEditId.value,
-              knowledgeForm.value,
+              updateData,
             );
+            // update 返回的是对象或null，只要不是null就是成功
             if (result) {
               ElMessage.success('更新成功');
             } else {
@@ -646,15 +672,11 @@
               formData.append('file', knowledgeForm.value.file);
               formData.append('agentId', String(knowledgeForm.value.agentId));
               formData.append('title', knowledgeForm.value.title);
-              if (knowledgeForm.value.category) {
-                formData.append('category', knowledgeForm.value.category);
-              }
-              if (knowledgeForm.value.tags) {
-                formData.append('tags', knowledgeForm.value.tags);
-              }
-              formData.append('status', knowledgeForm.value.status || 'active');
+              formData.append('type', 'DOCUMENT'); // 使用大写
+              // 默认召回
+              formData.append('isRecall', '1');
 
-              const response = await axios.post('/api/agent-knowledge/upload', formData, {
+              const response = await axios.post('/api/agent-knowledge/create', formData, {
                 headers: {
                   'Content-Type': 'multipart/form-data',
                 },
@@ -667,8 +689,12 @@
                 return;
               }
             } else {
-              // QA/FAQ 类型：使用普通创建接口
-              await agentKnowledgeService.create(knowledgeForm.value);
+              // QA/FAQ 类型：使用普通创建接口，需要将 type 转换为大写
+              const createData = {
+                ...knowledgeForm.value,
+                type: knowledgeForm.value.type?.toUpperCase(),
+              };
+              await agentKnowledgeService.create(createData);
               ElMessage.success('创建成功');
             }
           }
@@ -690,10 +716,7 @@
           title: '',
           content: '',
           type: 'document',
-          category: '',
-          tags: '',
-          status: 'active',
-          sourceUrl: '',
+          isRecall: 1,
           question: '',
           answer: '',
         } as AgentKnowledge & { question?: string; answer?: string };
@@ -716,7 +739,6 @@
         knowledgeForm,
         fileList,
         filterVisible,
-        sourceFilter,
         toggleFilter,
         clearFilters,
         loadKnowledgeList,
@@ -732,6 +754,7 @@
         handleTypeChange,
         handleFileChange,
         toggleStatus,
+        handleRetry,
       };
     },
   });

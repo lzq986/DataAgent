@@ -53,7 +53,7 @@ public enum KnowledgeType {
 	 */
 	public static KnowledgeType fromCode(String code) {
 		for (KnowledgeType type : values()) {
-			if (type.getCode().equals(code)) {
+			if (type.getCode().equalsIgnoreCase(code)) {
 				return type;
 			}
 		}

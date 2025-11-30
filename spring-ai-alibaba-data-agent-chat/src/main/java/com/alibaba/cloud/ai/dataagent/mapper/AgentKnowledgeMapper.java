@@ -39,7 +39,7 @@ public interface AgentKnowledgeMapper {
 	@Insert("""
 
 			INSERT INTO agent_knowledge (agent_id, title, content, type, question, is_recall, embedding_status, source_filename, file_path, file_size, file_type, is_deleted, is_resource_cleaned, created_time, updated_time)
-			VALUES (#{agentId}, #{title}, #{content}, #{type.code}, #{question}, #{isRecall}, #{embeddingStatus}, #{sourceFilename}, #{filePath}, #{fileSize}, #{fileType}, #{isDeleted}, #{isResourceCleaned}, #{createdTime}, #{updatedTime})
+			VALUES (#{agentId}, #{title}, #{content}, #{type}, #{question}, #{isRecall}, #{embeddingStatus}, #{sourceFilename}, #{filePath}, #{fileSize}, #{fileType}, #{isDeleted}, #{isResourceCleaned}, #{createdTime}, #{updatedTime})
 
 			""")
 	@Options(useGeneratedKeys = true, keyProperty = "id", keyColumn = "id")
@@ -51,7 +51,7 @@ public interface AgentKnowledgeMapper {
 			<set>
 				<if test="title != null">title = #{title},</if>
 				<if test="content != null">content = #{content},</if>
-				<if test="type != null">type = #{type.code},</if>
+				<if test="type != null">type = #{type},</if>
 				<if test="question != null">question = #{question},</if>
 				<if test="isRecall != null">is_recall = #{isRecall},</if>
 				<if test="embeddingStatus != null">embedding_status = #{embeddingStatus},</if>
@@ -111,7 +111,7 @@ public interface AgentKnowledgeMapper {
 	List<Integer> selectRecalledKnowledgeIds(@Param("agentId") Integer agentId);
 
 	/**
-	 * 查询待清理的“僵尸”记录 条件：is_deleted = 1 AND is_resource_cleaned = 0 AND updated_time < (当前时间
+	 * 查询待清理的“僵尸”记录 条件：is_deleted = 1 AND is_resource_cleaned = 0 AND updated_time <(当前时间
 	 * - N分钟)
 	 */
 	@Select("""

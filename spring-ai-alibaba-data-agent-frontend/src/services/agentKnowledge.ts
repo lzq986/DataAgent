@@ -25,14 +25,10 @@ export interface AgentKnowledge {
   title?: string;
   content?: string;
   type?: string;
-  category?: string;
-  tags?: string;
-  status?: string;
-  sourceUrl?: string;
-  filePath?: string;
-  fileSize?: number;
-  fileType?: string;
+  question?: string;
+  isRecall?: number; // 1=召回, 0=非召回
   embeddingStatus?: string;
+  errorMsg?: string;
   creatorId?: number;
   createTime?: string;
   updateTime?: string;
@@ -45,7 +41,6 @@ export interface AgentKnowledgeQueryDTO {
   agentId: number;
   title?: string;
   type?: string;
-  sourceUrl?: string;
   embeddingStatus?: string;
   pageNum?: number;
   pageSize?: number;
@@ -123,7 +118,7 @@ class AgentKnowledgeService {
    */
   async create(knowledge: AgentKnowledge): Promise<AgentKnowledge> {
     const response = await axios.post<{ success: boolean; data: AgentKnowledge }>(
-      API_BASE_URL,
+      `${API_BASE_URL}/create`,
       knowledge,
     );
     return response.data.data;
@@ -148,6 +143,21 @@ class AgentKnowledgeService {
   }
 
   /**
+   * 更新召回状态
+   */
+  async updateRecallStatus(id: number, recalled: number): Promise<AgentKnowledge | null> {
+    try {
+      const response = await axios.put<{ success: boolean; data: AgentKnowledge }>(
+        `${API_BASE_URL}/knowledge/${id}/recall-status/${recalled}`
+      );
+      return response.data.data;
+    } catch (error) {
+      console.error('Failed to update recall status:', error);
+      return null;
+    }
+  }
+
+  /**
    * 删除知识
    */
   async delete(id: number): Promise<boolean> {
@@ -163,17 +173,14 @@ class AgentKnowledgeService {
   }
 
   /**
-   * 批量更新状态
+   * 重试向量化
    */
-  async batchUpdateStatus(ids: number[], status: string): Promise<boolean> {
+  async retryEmbedding(id: number): Promise<boolean> {
     try {
-      const response = await axios.put<{ success: boolean }>(`${API_BASE_URL}/batch/status`, {
-        ids,
-        status,
-      });
+      const response = await axios.post<{ success: boolean }>(`${API_BASE_URL}/retry-embedding/${id}`);
       return response.data.success;
     } catch (error) {
-      console.error('Failed to batch update status:', error);
+      console.error('Failed to retry embedding:', error);
       return false;
     }
   }

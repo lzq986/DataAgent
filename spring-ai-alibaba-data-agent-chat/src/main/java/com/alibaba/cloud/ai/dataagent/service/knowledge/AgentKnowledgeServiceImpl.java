@@ -60,6 +60,7 @@ public class AgentKnowledgeServiceImpl implements AgentKnowledgeService {
 	}
 
 	@Override
+	@Transactional
 	public AgentKnowledgeVO createKnowledge(CreateKnowledgeDto createKnowledgeDto) {
 		String storagePath = null;
 		checkCreateKnowledgeDto(createKnowledgeDto);
@@ -196,6 +197,7 @@ public class AgentKnowledgeServiceImpl implements AgentKnowledgeService {
 	}
 
 	@Override
+	@Transactional
 	public void retryEmbedding(Integer id) {
 		AgentKnowledge knowledge = agentKnowledgeMapper.selectById(id);
 		if (knowledge.getEmbeddingStatus().equals(EmbeddingStatus.PROCESSING)) {

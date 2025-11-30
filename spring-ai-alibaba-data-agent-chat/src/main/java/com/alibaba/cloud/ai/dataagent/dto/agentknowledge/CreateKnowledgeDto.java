@@ -60,6 +60,7 @@ public class CreateKnowledgeDto {
 	/**
 	 * 上传的文件（当type=DOCUMENT时必填）
 	 */
+	@com.fasterxml.jackson.annotation.JsonIgnore
 	private MultipartFile file;
 
 }

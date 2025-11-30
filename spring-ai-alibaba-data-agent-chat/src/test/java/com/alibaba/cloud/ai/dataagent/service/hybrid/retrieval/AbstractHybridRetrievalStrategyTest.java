@@ -15,7 +15,7 @@
  */
 package com.alibaba.cloud.ai.dataagent.service.hybrid.retrieval;
 
-import com.alibaba.cloud.ai.dataagent.common.request.AgentSearchRequest;
+import com.alibaba.cloud.ai.dataagent.common.request.HybridSearchRequest;
 import com.alibaba.cloud.ai.dataagent.service.hybrid.fusion.FusionStrategy;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -57,7 +57,7 @@ class AbstractHybridRetrievalStrategyTest {
 		}
 
 		@Override
-		public List<Document> getDocumentsByKeywords(AgentSearchRequest agentSearchRequest) {
+		public List<Document> getDocumentsByKeywords(HybridSearchRequest request) {
 			// 在测试中，这个方法的行为会被 Mockito 控制
 			return Collections.emptyList();
 		}
@@ -72,18 +72,16 @@ class AbstractHybridRetrievalStrategyTest {
 		// 注意：这里我们使用了 spy 来部分 mock MyHybridRetrievalStrategy
 		// 这样我们就可以 mock getDocumentsByKeywords 方法，同时测试 retrieve 方法的真实逻辑
 		retrievalStrategy = org.mockito.Mockito
-			.spy(new MyHybridRetrievalStrategy(directExecutor, vectorStore, fusionStrategy));
+				.spy(new MyHybridRetrievalStrategy(directExecutor, vectorStore, fusionStrategy));
 	}
 
 	@Test
 	void retrieve_ShouldFuseVectorAndKeywordResults_WhenQueryIsPresent() {
 		// 1. 准备 (Arrange)
-		AgentSearchRequest request = AgentSearchRequest.builder()
-			.agentId("agent1")
-			.docVectorType("test-type")
-			.query("test query")
-			.topK(10)
-			.build();
+		HybridSearchRequest request = HybridSearchRequest.builder()
+				.query("test query")
+				.topK(10)
+				.build();
 
 		List<Document> vectorResults = List.of(new Document("vec_doc1"), new Document("vec_doc2"));
 		List<Document> keywordResults = List.of(new Document("key_doc1"));
@@ -107,12 +105,10 @@ class AbstractHybridRetrievalStrategyTest {
 	@Test
 	void retrieve_ShouldReturnOnlyVectorResults_WhenQueryIsEmpty() {
 		// 1. 准备 (Arrange)
-		AgentSearchRequest request = AgentSearchRequest.builder()
-			.agentId("agent1")
-			.docVectorType("test-type")
-			.query("") // 空查询字符串
-			.topK(10)
-			.build();
+		HybridSearchRequest request = HybridSearchRequest.builder()
+				.query("") // 空查询字符串
+				.topK(10)
+				.build();
 
 		Document doc1 = new Document("vec_doc1");
 		Document doc2 = new Document("vec_doc2");
